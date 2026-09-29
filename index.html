@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#FFB3BA">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Dora">
+<title>Dora</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="topbar-title">🍡 Dora</div>
+    <div class="topbar-month" id="topbarMonth"></div>
+  </header>
+
+  <main id="page-home" class="page"></main>
+  <main id="page-stats" class="page hidden"></main>
+  <main id="page-accounts" class="page hidden"></main>
+  <main id="page-settings" class="page hidden"></main>
+
+  <nav id="bottomnav">
+    <button class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span>首页</span></button>
+    <button class="nav-item" data-page="stats"><span class="nav-icon">📊</span><span>统计</span></button>
+    <button class="nav-item nav-add" id="navAdd"><span class="nav-add-circle">＋</span><span>记账</span></button>
+    <button class="nav-item" data-page="accounts"><span class="nav-icon">💳</span><span>账户</span></button>
+    <button class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span>设置</span></button>
+  </nav>
+</div>
+
+<!-- 底部弹层 -->
+<div id="sheetMask" class="sheet-mask hidden"></div>
+<div id="sheet" class="sheet hidden">
+  <div class="sheet-grabber"></div>
+  <div id="sheetBody" class="sheet-body"></div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/store.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+</script>
+</body>
+</html>

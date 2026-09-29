@@ -1,0 +1,17 @@
+{
+  "name": "团团记账 - 大学生的AA记账本",
+  "short_name": "团团记账",
+  "description": "团团记账：大学生多账户记账，AA分账、宿舍桶装水拼单、收支统计，离线可用。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7F8",
+  "theme_color": "#FFB3BA",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
