@@ -1,4 +1,4 @@
-/* ===== 马卡龙记账 样式 ===== */
+/* ===== 记账本 样式 ===== */
 :root {
   --pink: #FFB3BA;
   --blue: #BAE1FF;
@@ -278,3 +278,95 @@ html[data-theme="dark"] .calc button.op { color: #BFE0FF; }
 
 /* 删除按钮 */
 .tx-del { color: var(--text-sub); font-size: 12px; border: none; background: none; cursor: pointer; padding: 4px; }
+
+/* ===== v1.1 新增 ===== */
+/* 顶栏昵称 —— 方案B：半透明深色「毛玻璃」胶囊（白字有靠山，不再刺眼）
+   备选（换方案时只改下面这几行即可）：
+   方案A 深色柔字 → color:#5C4033; background:none; border:none; text-shadow:none;
+   方案C 同色系深一度 → color:#C97B8B; background:none; border:none; text-shadow:none; */
+.topbar-nick {
+  font-size: 13px; font-weight: 600; color: #fff;
+  background: rgba(0, 0, 0, .22);
+  -webkit-backdrop-filter: blur(8px) saturate(1.15);
+  backdrop-filter: blur(8px) saturate(1.15);
+  border: 1px solid rgba(255, 255, 255, .38);
+  padding: 4px 13px; border-radius: 14px;
+  max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .22);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .10);
+  transition: background .2s;
+}
+
+/* 本月汇总卡片 */
+.month-sum { display: flex; gap: 8px; }
+.ms-item {
+  flex: 1; background: var(--bg); border-radius: 14px;
+  padding: 11px 6px; text-align: center; min-width: 0;
+}
+.ms-label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; }
+.ms-item b { font-size: 15px; font-weight: 800; word-break: break-all; }
+.ms-exp { color: var(--expense); }
+.ms-inc { color: var(--income); }
+
+/* 编辑面板：只读金额 */
+.edit-amount-wrap { text-align: center; padding: 12px 0 4px; }
+.edit-amount-label { font-size: 12px; color: var(--text-sub); }
+.edit-amount { font-size: 34px; font-weight: 800; margin-top: 4px; letter-spacing: 1px; }
+.edit-amount.income { color: var(--income); }
+.edit-amount.expense { color: var(--expense); }
+
+/* 只读字段 */
+.read-val {
+  font-size: 14px; background: var(--bg); border-radius: 12px;
+  padding: 11px 12px; color: var(--text-sub); line-height: 1.5;
+}
+
+/* 小号分段控件（编辑面板的类型切换） */
+.seg.seg-sm { margin-bottom: 4px; }
+.seg.seg-sm button { padding: 8px 0; font-size: 13px; }
+
+/* 多行备注：不限字数 */
+textarea.input.ta {
+  min-height: 72px; line-height: 1.6; resize: vertical;
+  font-family: inherit; display: block;
+}
+
+/* ===== Font Awesome 图标（v1.1）===== */
+/* 默认：马卡龙粉，适合白/浅色卡面 */
+.fa-solid, .fa-brands, .fa-regular { color: var(--pink-deep); vertical-align: middle; }
+/* 落在马卡龙彩底上的图标：半透明深色 → 自动呈现「同色系深一度」，粉底不再糊成一片 */
+.tx-icon i, .cat-bubble i { color: rgba(0, 0, 0, .55); }
+/* 渐变底（顶栏 / hero 卡片）：白色 */
+.topbar-title i { color: #fff; font-size: 16px; margin-right: 2px; }
+.hero-pill i { color: #fff; font-size: 11px; margin-right: 4px; }
+/* 底部导航 / 账户卡 / 按钮：跟随各自文字色 */
+.nav-icon i { color: inherit; font-size: 19px; }
+.nav-add-circle i { color: inherit; font-size: 19px; }
+.acc-icon i { color: inherit; font-size: 21px; }
+.btn i { color: inherit; }
+.chip i { font-size: 12px; }
+.legend-item i { color: var(--text-sub); font-size: 11px; }
+/* 尺寸微调：FA 字形视觉比 emoji 小，按容器等比调整 */
+.tx-icon i { font-size: 17px; }
+.cat-bubble i { font-size: 21px; }
+.cat-manage-row .cat-bubble i { font-size: 15px; }
+.card-title i { font-size: 14px; }
+/* 设置行 / 拖拽手柄 / 删除按钮 */
+.set-row > span:first-child i { font-size: 14px; }
+.set-row > span:last-child i { color: var(--text-sub); font-size: 13px; }
+.drag-handle i { color: inherit; font-size: 14px; }
+.tx-del i { color: inherit; font-size: 12px; }
+
+/* 图标选择器（新增账户 / 分类） */
+.icon-pick { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+.icon-pick-btn {
+  aspect-ratio: 1 / 1; min-height: 34px; padding: 0;
+  border: 1.5px solid var(--line); background: var(--card); border-radius: 12px;
+  cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-pick-btn i { font-size: 15px; color: rgba(0, 0, 0, .5); }
+.icon-pick-btn.on { border-color: var(--pink-deep); background: rgba(255, 179, 186, .2); }
+.icon-pick-btn.on i { color: var(--pink-deep); }
+html[data-theme="dark"] .icon-pick-btn i { color: rgba(255, 255, 255, .6); }
+html[data-theme="dark"] .icon-pick-btn.on i { color: var(--pink-deep); }

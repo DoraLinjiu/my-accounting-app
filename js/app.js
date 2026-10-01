@@ -11,6 +11,42 @@
   function fmt(n) { return Number(n || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
+  /* ---------- 图标（Font Awesome 6） ---------- */
+  var FA_TAG = 'fa-solid fa-tag';
+  var FA_CARD = 'fa-solid fa-credit-card';
+  function ic(cls) { return '<i class="' + cls + '"></i>'; }
+  function faOf(obj, fallback) {
+    return Store.faIcon(obj && obj.icon ? obj.icon : '', fallback || FA_TAG);
+  }
+  function iconOf(obj, fallback) { return ic(faOf(obj, fallback || FA_TAG)); }
+
+  /* 新增账户 / 分类时可选用的图标 */
+  var ICON_CHOICES = [
+    'fa-solid fa-utensils', 'fa-solid fa-cart-shopping', 'fa-solid fa-car', 'fa-solid fa-gamepad',
+    'fa-solid fa-house', 'fa-solid fa-droplet', 'fa-solid fa-mug-hot', 'fa-solid fa-bus',
+    'fa-solid fa-shirt', 'fa-solid fa-film', 'fa-solid fa-book', 'fa-solid fa-dumbbell',
+    'fa-solid fa-plane', 'fa-solid fa-phone', 'fa-solid fa-wifi', 'fa-solid fa-gift',
+    'fa-solid fa-heart', 'fa-solid fa-star', 'fa-solid fa-bolt', 'fa-solid fa-tag',
+    'fa-solid fa-credit-card', 'fa-solid fa-wallet', 'fa-solid fa-piggy-bank', 'fa-solid fa-building-columns',
+    'fa-solid fa-money-bill-wave', 'fa-solid fa-chart-line', 'fa-solid fa-envelope-open-text', 'fa-solid fa-briefcase',
+    'fa-brands fa-weixin', 'fa-brands fa-alipay', 'fa-solid fa-seedling', 'fa-solid fa-paw'
+  ];
+  function iconPickHtml(selected) {
+    return ICON_CHOICES.map(function (cls) {
+      return '<button type="button" class="icon-pick-btn' + (cls === selected ? ' on' : '') + '" data-icon="' + cls + '">' +
+        ic(cls) + '</button>';
+    }).join('');
+  }
+  function bindIconPick(root, onPick) {
+    $$(root + ' .icon-pick-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        $$(root + ' .icon-pick-btn').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        onPick(b.getAttribute('data-icon'));
+      });
+    });
+  }
+
   var toastTimer = null;
   function toast(msg) {
     var t = $('#toast');
@@ -60,10 +96,13 @@
   function renderHome() {
     var today = todayStr();
     var ym = today.slice(0, 7);
-    $('#topbarMonth').textContent = (new Date().getMonth() + 1) + '月';
+    /* v1.1：顶栏显示自定义昵称（默认 Dora） */
+    var nickEl = $('#topbarNick');
+    if (nickEl) nickEl.textContent = Store.settings().nickname || 'Dora';
 
     var sumToday = Store.summary(today, today);
     var sumMonth = Store.summary(ym + '-01', ym + '-31');
+    var monthLeft = Math.round((sumMonth.income - sumMonth.expense) * 100) / 100;
     var total = Store.totalAssets();
 
     var txs = Store.getTransactions().slice(0, 60);
@@ -76,7 +115,7 @@
 
     var listHtml = '';
     if (!order.length) {
-      listHtml = '<div class="empty-tip">还没有记录，点底部「＋」记一笔吧</div>';
+      listHtml = '<div class="empty-tip">还没有记录，点底部中间的「记账」按钮吧</div>';
     } else {
       order.forEach(function (date) {
         var label = date === today ? '今天' : (date === toStr(new Date(Date.now() - 864e5)) ? '昨天' : date.slice(5).replace('-', '月') + '日');
@@ -91,14 +130,23 @@
         '<div class="total">¥ ' + fmt(total) + '</div>' +
         '<div class="hero-row">' +
           '<div class="hero-pill">今日支出<b>¥' + fmt(sumToday.expense) + '</b></div>' +
-          '<div class="hero-pill">本月支出<b>¥' + fmt(sumMonth.expense) + '</b></div>' +
-          '<div class="hero-pill">本月收入<b>¥' + fmt(sumMonth.income) + '</b></div>' +
+          '<div class="hero-pill">今日收入<b>¥' + fmt(sumToday.income) + '</b></div>' +
+          '<div class="hero-pill">账户数<b>' + Store.getAccounts().length + ' 个</b></div>' +
         '</div>' +
       '</div>' +
-      '<div class="card"><div class="card-title">最近记录<span class="more">点条目可删除</span></div>' + listHtml + '</div>';
+      /* v1.1 新增：本月汇总卡片 */
+      '<div class="card">' +
+        '<div class="card-title">本月汇总<span class="more">' + ym.replace('-', ' 年 ') + ' 月</span></div>' +
+        '<div class="month-sum">' +
+          '<div class="ms-item"><span class="ms-label">总支出</span><b class="ms-exp">¥' + fmt(sumMonth.expense) + '</b></div>' +
+          '<div class="ms-item"><span class="ms-label">总收入</span><b class="ms-inc">¥' + fmt(sumMonth.income) + '</b></div>' +
+          '<div class="ms-item"><span class="ms-label">结余</span><b>¥' + fmt(monthLeft) + '</b></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card"><div class="card-title">最近记录<span class="more">点条目可编辑 / 删除</span></div>' + listHtml + '</div>';
 
     $$('#page-home .tx-item').forEach(function (el) {
-      el.addEventListener('click', function () { openTxDetail(el.getAttribute('data-id')); });
+      el.addEventListener('click', function () { openTxEdit(el.getAttribute('data-id')); });
     });
   }
 
@@ -106,14 +154,14 @@
     var icon, name, sub, amt, cls;
     if (t.kind === 'transfer') {
       var fa = Store.getAccount(t.accountId), ta = Store.getAccount(t.toAccountId);
-      icon = '🔁';
+      icon = ic('fa-solid fa-arrow-right-arrow-left');
       name = '转账';
       sub = (fa ? fa.name : '?') + ' → ' + (ta ? ta.name : '?');
       amt = '¥' + fmt(t.amount); cls = '';
     } else {
       var c = Store.getCategory(t.categoryId);
       var a = Store.getAccount(t.accountId);
-      icon = c ? c.icon : '📦';
+      icon = ic(faOf(c, FA_TAG));
       name = c ? c.name : '其他';
       sub = (a ? a.name : '') + (t.note ? ' · ' + t.note : '');
       amt = (t.kind === 'income' ? '+' : '-') + '¥' + fmt(t.amount);
@@ -126,22 +174,115 @@
       '<div class="tx-amount ' + cls + '">' + amt + '</div></div>';
   }
 
-  function openTxDetail(id) {
+  /* ---------- v1.1 通用二次确认 ---------- */
+  function openConfirm(title, msg, okText, onOk) {
+    openSheet(
+      '<div class="card-title">' + esc(title) + '</div>' +
+      '<div style="font-size:13px;color:var(--text-sub);line-height:1.9">' + msg + '</div>' +
+      '<button class="btn btn-danger" id="cfmYes">' + esc(okText || '确认') + '</button>' +
+      '<button class="btn btn-ghost" id="cfmNo">取消</button>'
+    );
+    $('#cfmYes').addEventListener('click', function () { onOk(); });
+    $('#cfmNo').addEventListener('click', closeSheet);
+  }
+
+  /* ---------- v1.1 记录编辑面板 ---------- */
+  var edit = null;
+
+  function openTxEdit(id) {
     var t = Store.getTransactions().filter(function (x) { return x.id === id; })[0];
     if (!t) return;
-    var html = '<div class="card-title">记录详情</div>' +
-      '<div style="font-size:14px;line-height:2">' +
-      '类型：' + (t.kind === 'transfer' ? '转账' : t.kind === 'income' ? '收入' : '支出') + '<br>' +
-      '金额：¥' + fmt(t.amount) + '<br>' +
-      '日期：' + t.date + (t.note ? '<br>备注：' + esc(t.note) : '') + '</div>' +
-      '<button class="btn btn-danger" id="txDelBtn">删除这条记录</button>' +
-      '<button class="btn btn-ghost" id="txCloseBtn">关闭</button>';
-    openSheet(html);
-    $('#txDelBtn').addEventListener('click', function () {
-      Store.deleteTransaction(id);
-      closeSheet(); toast('已删除'); rerender();
+    edit = { id: id, kind: t.kind, categoryId: t.categoryId || null, note: t.note || '' };
+    renderTxEdit();
+  }
+
+  function renderTxEdit() {
+    var t = Store.getTransactions().filter(function (x) { return x.id === edit.id; })[0];
+    if (!t) { closeSheet(); return; }
+    var isTransfer = t.kind === 'transfer';
+
+    /* 类型：转账不可改（涉及两个账户，改了余额会凭空变化） */
+    var kindHtml;
+    if (isTransfer) {
+      kindHtml = '<div class="field-label">类型</div>' +
+        '<div class="read-val">' + ic('fa-solid fa-arrow-right-arrow-left') + ' 转账（转账记录不可改类型）</div>';
+    } else {
+      kindHtml = '<div class="field-label">类型（点一下切换）</div>' +
+        '<div class="seg seg-sm">' +
+          '<button data-ekind="expense" class="' + (edit.kind === 'expense' ? 'on expense' : '') + '">支出</button>' +
+          '<button data-ekind="income" class="' + (edit.kind === 'income' ? 'on income' : '') + '">收入</button>' +
+        '</div>';
+    }
+
+    /* 分类下拉：按当前类型取对应分类表 */
+    var catHtml = '';
+    if (!isTransfer) {
+      var cats = Store.getCategories(edit.kind === 'income' ? 'income' : 'expense');
+      if (!cats.some(function (c) { return c.id === edit.categoryId; })) {
+        edit.categoryId = cats.length ? cats[0].id : null;
+      }
+      var opts = cats.map(function (c) {
+        return '<option value="' + c.id + '"' + (c.id === edit.categoryId ? ' selected' : '') + '>' +
+          esc(c.name) + '</option>';
+      }).join('');
+      catHtml = '<div class="field-label">分类</div>' +
+        '<select class="select" id="editCat">' + opts + '</select>';
+    }
+
+    var accText = isTransfer
+      ? (((Store.getAccount(t.accountId) || {}).name || '?') + ' → ' + ((Store.getAccount(t.toAccountId) || {}).name || '?'))
+      : ((Store.getAccount(t.accountId) || {}).name || '');
+
+    openSheet(
+      '<div class="card-title">编辑记录</div>' +
+      '<div class="edit-amount-wrap">' +
+        '<div class="edit-amount-label">金额（只读，不可修改）</div>' +
+        '<div class="edit-amount ' + (isTransfer ? '' : (t.kind === 'income' ? 'income' : 'expense')) + '">' +
+          (isTransfer ? '¥' : (t.kind === 'income' ? '+¥' : '-¥')) + fmt(t.amount) +
+        '</div>' +
+      '</div>' +
+      kindHtml + catHtml +
+      '<div class="field-label">账户</div><div class="read-val">' + esc(accText) + '</div>' +
+      '<div class="field-label">日期</div><div class="read-val">' + t.date + '</div>' +
+      '<div class="field-label">备注（可长文本，清空即删除）</div>' +
+      '<textarea class="input ta" id="editNote" rows="3" placeholder="选填">' + esc(edit.note) + '</textarea>' +
+      '<button class="btn btn-primary" id="editSave">保存修改</button>' +
+      '<button class="btn btn-danger" id="editDel">删除这条记录</button>'
+    );
+
+    /* 类型切换：同步换分类表并要求重选 */
+    $$('#sheetBody [data-ekind]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var k = b.getAttribute('data-ekind');
+        if (k === edit.kind) return;
+        edit.note = $('#editNote').value;
+        edit.kind = k;
+        var next = Store.getCategories(k === 'income' ? 'income' : 'expense');
+        edit.categoryId = next.length ? next[0].id : null;
+        renderTxEdit();
+        toast('已切为' + (k === 'income' ? '收入' : '支出') + '，请确认分类');
+      });
     });
-    $('#txCloseBtn').addEventListener('click', closeSheet);
+    var sel = $('#editCat');
+    if (sel) sel.addEventListener('change', function () { edit.categoryId = sel.value; });
+    $('#editNote').addEventListener('input', function (e) { edit.note = e.target.value; });
+
+    $('#editSave').addEventListener('click', function () {
+      edit.note = $('#editNote').value;
+      var patch = { note: edit.note };
+      if (!isTransfer) { patch.kind = edit.kind; patch.categoryId = edit.categoryId; }
+      Store.updateTransaction(edit.id, patch);
+      closeSheet(); toast('已保存修改'); rerender();
+    });
+
+    $('#editDel').addEventListener('click', function () {
+      var label = isTransfer ? '转账 ¥' + fmt(t.amount) : ((Store.getCategory(t.categoryId) || {}).name || '') + ' ¥' + fmt(t.amount);
+      openConfirm('确认删除这条记录？', '将删除：' + esc(label) + '<br>删除后无法恢复，账户余额与统计会同步变化。',
+        '确认删除', function () {
+          Store.deleteTransaction(edit.id);
+          closeSheet(); toast('已删除'); rerender();
+        });
+    });
   }
 
   /* ---------- 统计 ---------- */
@@ -224,7 +365,7 @@
 
     var legend = catData.slice(0, 8).map(function (c) {
       return '<div class="legend-item"><span class="legend-dot" style="background:' + c.color + '"></span>' +
-        esc(c.icon + ' ' + c.name) + '<b>¥' + fmt(c.value) + '</b></div>';
+        ic(faOf(c, FA_TAG)) + esc(c.name) + '<b>¥' + fmt(c.value) + '</b></div>';
     }).join('');
 
     var dateCtl = statsState.period === 'day'
@@ -269,22 +410,22 @@
     var total = Store.totalAssets();
     var cards = accs.map(function (a) {
       return '<div class="acc-card" data-id="' + a.id + '" style="background:' + a.color + '">' +
-        '<div class="acc-icon">' + a.icon + '</div>' +
+        '<div class="acc-icon">' + iconOf(a, FA_CARD) + '</div>' +
         '<div class="acc-main"><div class="acc-name">' + esc(a.name) + '</div>' +
         '<div class="acc-bal">¥ ' + fmt(Store.accountBalance(a.id)) + '</div></div>' +
-        '<div class="drag-handle" title="拖拽排序">≡</div>' +
+        '<div class="drag-handle" title="拖拽排序">' + ic('fa-solid fa-grip-lines') + '</div>' +
       '</div>';
     }).join('');
 
     $('#page-accounts').innerHTML =
       '<div class="hero"><div class="label">总资产 (元)</div><div class="total">¥ ' + fmt(total) + '</div>' +
         '<div class="hero-row">' +
-          '<div class="hero-pill" id="btnTransfer" style="cursor:pointer">🔁 账户互转</div>' +
-          '<div class="hero-pill" id="btnAddAcc" style="cursor:pointer">＋ 添加账户</div>' +
+          '<div class="hero-pill" id="btnTransfer" style="cursor:pointer">' + ic('fa-solid fa-arrow-right-arrow-left') + ' 账户互转</div>' +
+          '<div class="hero-pill" id="btnAddAcc" style="cursor:pointer">' + ic('fa-solid fa-plus') + ' 添加账户</div>' +
         '</div>' +
       '</div>' +
       '<div id="accList">' + cards + '</div>' +
-      '<div class="empty-tip">按住右侧 ≡ 拖拽调整顺序 · 点卡片可改名/校准余额</div>';
+      '<div class="empty-tip">按住右侧手柄拖拽调整顺序 · 点卡片可改名/校准余额</div>';
 
     $('#btnTransfer').addEventListener('click', function () { openRecordSheet('transfer'); });
     $('#btnAddAcc').addEventListener('click', openAddAccount);
@@ -302,17 +443,19 @@
 
   function openAddAccount() {
     var colors = ['#FFB3BA', '#BAE1FF', '#BAFFC9', '#FFFFBA'];
+    var pickedIcon = ICON_CHOICES[0];
     openSheet(
       '<div class="card-title">添加账户</div>' +
       '<div class="field-label">名称</div><input class="input" id="newAccName" placeholder="如：招商信用卡">' +
-      '<div class="field-label">图标（emoji）</div><input class="input" id="newAccIcon" placeholder="如 💳" maxlength="4">' +
+      '<div class="field-label">图标（Font Awesome）</div><div class="icon-pick" id="iconPick">' + iconPickHtml(pickedIcon) + '</div>' +
       '<div class="field-label">初始余额</div><input class="input" id="newAccBal" type="number" step="0.01" placeholder="0.00">' +
       '<button class="btn btn-primary" id="addAccBtn">添加</button>'
     );
+    bindIconPick('#sheetBody', function (cls) { pickedIcon = cls; });
     $('#addAccBtn').addEventListener('click', function () {
       var name = $('#newAccName').value.trim();
       if (!name) { toast('请输入名称'); return; }
-      var acc = Store.addAccount(name, $('#newAccIcon').value.trim() || '💳', colors[Math.floor(Math.random() * 4)]);
+      var acc = Store.addAccount(name, pickedIcon, colors[Math.floor(Math.random() * 4)]);
       var bal = parseFloat($('#newAccBal').value);
       if (!isNaN(bal) && bal !== 0) Store.setAccountBalance(acc.id, bal);
       closeSheet(); toast('已添加'); renderAccounts();
@@ -324,7 +467,7 @@
     if (!a) return;
     var bal = Store.accountBalance(id);
     openSheet(
-      '<div class="card-title">' + a.icon + ' ' + esc(a.name) + '</div>' +
+      '<div class="card-title">' + iconOf(a, FA_CARD) + ' ' + esc(a.name) + '</div>' +
       '<div class="field-label">账户名称</div><input class="input" id="editAccName" value="' + esc(a.name) + '">' +
       '<div class="field-label">当前余额（校准为实际金额）</div><input class="input" id="editAccBal" type="number" step="0.01" value="' + bal + '">' +
       '<button class="btn btn-primary" id="saveAccBtn">保存</button>'
@@ -341,18 +484,27 @@
   /* ---------- 设置 ---------- */
   function renderSettings() {
     var dark = Store.settings().dark;
+    var nick = Store.settings().nickname || 'Dora';
     $('#page-settings').innerHTML =
+      /* v1.1 新增：昵称自定义 */
+      '<div class="card"><div class="card-title">个人</div>' +
+        '<div class="field-label" style="margin-top:0">' + ic('fa-solid fa-user') + ' 顶部昵称（显示在首页顶栏）</div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<input class="input" id="nickInput" value="' + esc(nick) + '" placeholder="给自己起个名字" maxlength="20">' +
+          '<button class="btn btn-primary" id="nickSave" style="width:92px;margin-top:0;padding:11px 0;font-size:14px">保存</button>' +
+        '</div>' +
+      '</div>' +
       '<div class="card"><div class="card-title">外观</div>' +
-        '<div class="set-row"><span>🌙 深色模式</span>' +
+        '<div class="set-row"><span>' + ic('fa-solid fa-moon') + ' 深色模式</span>' +
         '<label class="switch"><input type="checkbox" id="darkSwitch" ' + (dark ? 'checked' : '') + '><span class="track"></span></label></div>' +
       '</div>' +
       '<div class="card"><div class="card-title">分类管理</div>' +
-        '<div class="set-row" id="btnCatManage" style="cursor:pointer"><span>🏷 编辑 / 拖拽排序分类</span><span>›</span></div>' +
+        '<div class="set-row" id="btnCatManage" style="cursor:pointer"><span>' + ic('fa-solid fa-tags') + ' 编辑 / 拖拽排序分类</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
       '</div>' +
       '<div class="card"><div class="card-title">数据</div>' +
-        '<div class="set-row" id="btnExport" style="cursor:pointer"><span>📤 导出备份 (JSON)</span><span>›</span></div>' +
-        '<div class="set-row" id="btnImport" style="cursor:pointer"><span>📥 导入备份</span><span>›</span></div>' +
-        '<div class="set-row" id="btnClear" style="cursor:pointer"><span style="color:#E25563">🗑 清空全部数据</span><span>›</span></div>' +
+        '<div class="set-row" id="btnExport" style="cursor:pointer"><span>' + ic('fa-solid fa-file-export') + ' 导出备份 (JSON)</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
+        '<div class="set-row" id="btnImport" style="cursor:pointer"><span>' + ic('fa-solid fa-file-import') + ' 导入备份</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
+        '<div class="set-row" id="btnClear" style="cursor:pointer"><span style="color:#E25563">' + ic('fa-solid fa-trash') + ' 清空全部数据</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
       '</div>' +
       '<div class="card"><div class="card-title">安装为 App</div>' +
         '<div style="font-size:13px;color:var(--text-sub);line-height:1.9">' +
@@ -360,8 +512,17 @@
         'iPhone：Safari 打开本页 → 分享 →「添加到主屏幕」<br>' +
         '打包 APK：把本文件夹部署到 GitHub Pages / Vercel，再到 pwabuilder.com 输入网址一键生成。</div>' +
       '</div>' +
-      '<div class="empty-tip">Dora v1.0 · 大学生的记账小伙伴 · 数据保存在本机</div>';
+      '<div class="empty-tip">记账本 v' + Store.VERSION + ' · 大学生的记账小伙伴 · 数据保存在本机</div>';
 
+    /* v1.1：昵称保存 */
+    $('#nickSave').addEventListener('click', function () {
+      var v = $('#nickInput').value.trim();
+      if (!v) { toast('昵称不能为空'); return; }
+      Store.setSetting('nickname', v);
+      var el = $('#topbarNick');
+      if (el) el.textContent = v;
+      toast('昵称已保存');
+    });
     $('#darkSwitch').addEventListener('change', function (e) {
       Store.setSetting('dark', e.target.checked);
       applyTheme();
@@ -371,7 +532,7 @@
       var blob = new Blob([Store.exportJSON()], { type: 'application/json' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'dora-ledger-backup-' + todayStr() + '.json';
+      a.download = 'jizhangben-backup-' + todayStr() + '.json';
       a.click();
       URL.revokeObjectURL(a.href);
       toast('已导出');
@@ -409,28 +570,30 @@
   function renderCatManage() {
     var exp = Store.getCategories('expense');
     var inc = Store.getCategories('income');
+    var newCatIcon = ICON_CHOICES[0];
     function rows(list) {
       return list.map(function (c) {
         return '<div class="cat-manage-row" data-id="' + c.id + '">' +
-          '<span class="cat-bubble" style="background:' + c.color + ';width:36px;height:36px;font-size:17px;border-radius:11px">' + c.icon + '</span>' +
+          '<span class="cat-bubble" style="background:' + c.color + ';width:36px;height:36px;border-radius:11px">' + ic(faOf(c, FA_TAG)) + '</span>' +
           '<span>' + esc(c.name) + '</span>' +
-          '<button class="tx-del" data-del="' + c.id + '">✕</button>' +
-          '<span class="drag-handle">≡</span></div>';
+          '<button class="tx-del" data-del="' + c.id + '">' + ic('fa-solid fa-xmark') + '</button>' +
+          '<span class="drag-handle">' + ic('fa-solid fa-grip-lines') + '</span></div>';
       }).join('');
     }
     openSheet(
-      '<div class="card-title">分类管理<span class="more">按住 ≡ 拖拽排序</span></div>' +
+      '<div class="card-title">分类管理<span class="more">按住手柄拖拽排序</span></div>' +
       '<div class="field-label">支出分类</div><div id="catExp">' + rows(exp) + '</div>' +
       '<div class="field-label">收入分类</div><div id="catInc">' + rows(inc) + '</div>' +
       '<div class="field-label">新增分类</div>' +
       '<div style="display:flex;gap:8px">' +
-        '<input class="input" id="newCatIcon" placeholder="🐾" style="width:64px" maxlength="4">' +
         '<input class="input" id="newCatName" placeholder="名称">' +
-        '<select class="select" id="newCatKind" style="width:84px"><option value="expense">支出</option><option value="income">收入</option></select>' +
+        '<select class="select" id="newCatKind" style="width:96px"><option value="expense">支出</option><option value="income">收入</option></select>' +
       '</div>' +
+      '<div class="field-label">图标（Font Awesome）</div><div class="icon-pick" id="iconPick">' + iconPickHtml(newCatIcon) + '</div>' +
       '<button class="btn btn-primary" id="addCatBtn">添加分类</button>' +
       '<button class="btn btn-ghost" id="catDone">完成</button>'
     );
+    bindIconPick('#sheetBody', function (cls) { newCatIcon = cls; });
     makeSortable($('#catExp'), function (ids) { Store.reorderCategories(ids.concat(Store.getCategories('income').map(function (c) { return c.id; }))); });
     makeSortable($('#catInc'), function (ids) { Store.reorderCategories(Store.getCategories('expense').map(function (c) { return c.id; }).concat(ids)); });
     $$('#sheetBody [data-del]').forEach(function (b) {
@@ -443,7 +606,7 @@
       var name = $('#newCatName').value.trim();
       if (!name) { toast('请输入名称'); return; }
       var colors = ['#FFB3BA', '#BAE1FF', '#BAFFC9', '#FFFFBA'];
-      Store.addCategory(name, $('#newCatIcon').value.trim() || '🏷', colors[Math.floor(Math.random() * 4)], $('#newCatKind').value);
+      Store.addCategory(name, newCatIcon, colors[Math.floor(Math.random() * 4)], $('#newCatKind').value);
       renderCatManage();
       toast('已添加');
     });
@@ -489,14 +652,14 @@
     }).join('');
 
     var accChips = accs.map(function (a) {
-      return '<button class="chip ' + (rec.accountId === a.id ? 'on' : '') + '" data-acc="' + a.id + '">' + a.icon + ' ' + esc(a.name) + '</button>';
+      return '<button class="chip ' + (rec.accountId === a.id ? 'on' : '') + '" data-acc="' + a.id + '">' + iconOf(a, FA_CARD) + esc(a.name) + '</button>';
     }).join('');
 
     var html = '<div class="seg">' + tabs + '</div>';
 
     if (isTransfer) {
       var toChips = accs.map(function (a) {
-        return '<button class="chip ' + (rec.toAccountId === a.id ? 'on' : '') + '" data-tacc="' + a.id + '">' + a.icon + ' ' + esc(a.name) + '</button>';
+        return '<button class="chip ' + (rec.toAccountId === a.id ? 'on' : '') + '" data-tacc="' + a.id + '">' + iconOf(a, FA_CARD) + esc(a.name) + '</button>';
       }).join('');
       html += '<div class="field-label">从哪个账户转出</div><div class="chip-row">' + accChips + '</div>' +
         '<div class="field-label">转入到哪个账户</div><div class="chip-row">' + toChips + '</div>';
@@ -507,7 +670,7 @@
     if (!isTransfer) {
       var grid = cats.map(function (c) {
         return '<div class="cat-cell ' + (rec.categoryId === c.id ? 'on' : '') + '" data-cat="' + c.id + '">' +
-          '<div class="cat-bubble" style="background:' + c.color + '">' + c.icon + '</div>' +
+          '<div class="cat-bubble" style="background:' + c.color + '">' + ic(faOf(c, FA_TAG)) + '</div>' +
           '<span>' + esc(c.name) + '</span></div>';
       }).join('');
       html += '<div class="field-label">分类</div><div class="cat-grid">' + grid + '</div>';
@@ -517,8 +680,8 @@
       var per = rec.aaPeople > 0 ? Math.round(rec.aaTotal / rec.aaPeople * 100) / 100 : 0;
       html += '<div class="field-label">常用场景（点一下自动填好分类和备注）</div>' +
         '<div class="chip-row">' +
-          '<button class="chip" id="aaSceneWater">💧 桶装水</button>' +
-          '<button class="chip" id="aaSceneMeal">🍜 聚餐</button>' +
+          '<button class="chip" id="aaSceneWater">' + ic('fa-solid fa-droplet') + '桶装水</button>' +
+          '<button class="chip" id="aaSceneMeal">' + ic('fa-solid fa-utensils') + '聚餐</button>' +
         '</div>' +
         '<div class="field-label">总金额（点开输入，可计算）</div>' +
         '<div class="amount-display" id="aaTotalBox">' + (rec.aaTotal ? '¥ ' + fmt(rec.aaTotal) : '<span class="hint">点我输入总金额</span>') + '</div>' +
@@ -531,7 +694,8 @@
     }
 
     html += '<div class="field-label">日期</div><input class="input" id="recDate" type="date" value="' + rec.date + '">' +
-      '<div class="field-label">备注</div><input class="input" id="recNote" placeholder="选填" value="' + esc(rec.note) + '">' +
+      '<div class="field-label">备注（不限字数）</div>' +
+      '<textarea class="input ta" id="recNote" rows="2" placeholder="选填">' + esc(rec.note) + '</textarea>' +
       '<button class="btn btn-primary" id="recSave">' + (isAA ? '记录我的份额' : '保存') + '</button>';
 
     openSheet(html);
@@ -665,7 +829,7 @@
     function renderCalc() {
       var val = calcEval(expr);
       openSheet(
-        '<div class="card-title">🧮 计算器</div>' +
+        '<div class="card-title">' + ic('fa-solid fa-calculator') + ' 计算器</div>' +
         '<div class="amount-display" style="cursor:default">' + (expr || '<span class="hint">0</span>') + '</div>' +
         '<div style="text-align:right;color:var(--text-sub);font-size:13px;min-height:20px;margin-top:4px">' +
           (expr && !isNaN(val) ? '= ' + fmt(Math.round(val * 100) / 100) : '') + '</div>' +
@@ -675,7 +839,7 @@
           }).join('') +
         '</div>' +
         '<div style="display:flex;gap:8px;margin-top:8px">' +
-          '<button class="btn btn-ghost" id="calcBack" style="flex:1;margin-top:0">⌫</button>' +
+          '<button class="btn btn-ghost" id="calcBack" style="flex:1;margin-top:0">' + ic('fa-solid fa-delete-left') + '</button>' +
           '<button class="btn btn-ghost" id="calcClear" style="flex:1;margin-top:0">C</button>' +
           '<button class="btn btn-primary" id="calcOk" style="flex:2;margin-top:0">完成</button>' +
         '</div>'

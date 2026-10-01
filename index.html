@@ -7,18 +7,21 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Dora">
-<title>Dora</title>
+<meta name="apple-mobile-web-app-title" content="记账本">
+<title>记账本</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="css/styles.css">
+<!-- Font Awesome 6.5.0 图标库（CDN） -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="css/styles.css?v=1.1.2">
 </head>
 <body>
 <div id="app">
   <header id="topbar">
-    <div class="topbar-title">🍡 Dora</div>
-    <div class="topbar-month" id="topbarMonth"></div>
+    <div class="topbar-title"><i class="fa-solid fa-book"></i> 记账本</div>
+    <div class="topbar-nick" id="topbarNick">Dora</div>
   </header>
 
   <main id="page-home" class="page"></main>
@@ -27,11 +30,11 @@
   <main id="page-settings" class="page hidden"></main>
 
   <nav id="bottomnav">
-    <button class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span>首页</span></button>
-    <button class="nav-item" data-page="stats"><span class="nav-icon">📊</span><span>统计</span></button>
-    <button class="nav-item nav-add" id="navAdd"><span class="nav-add-circle">＋</span><span>记账</span></button>
-    <button class="nav-item" data-page="accounts"><span class="nav-icon">💳</span><span>账户</span></button>
-    <button class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span>设置</span></button>
+    <button class="nav-item active" data-page="home"><span class="nav-icon"><i class="fa-solid fa-house"></i></span><span>首页</span></button>
+    <button class="nav-item" data-page="stats"><span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span><span>统计</span></button>
+    <button class="nav-item nav-add" id="navAdd"><span class="nav-add-circle"><i class="fa-solid fa-plus"></i></span><span>记账</span></button>
+    <button class="nav-item" data-page="accounts"><span class="nav-icon"><i class="fa-solid fa-wallet"></i></span><span>账户</span></button>
+    <button class="nav-item" data-page="settings"><span class="nav-icon"><i class="fa-solid fa-gear"></i></span><span>设置</span></button>
   </nav>
 </div>
 
@@ -44,9 +47,9 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="js/store.js"></script>
-<script src="js/charts.js"></script>
-<script src="js/app.js"></script>
+<script src="js/store.js?v=1.1.2"></script>
+<script src="js/charts.js?v=1.1.2"></script>
+<script src="js/app.js?v=1.1.2"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   navigator.serviceWorker.register('sw.js').catch(function(){});
