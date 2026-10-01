@@ -2,6 +2,31 @@
 (function () {
   'use strict';
 
+  /* ---------- PWA 安装：捕获浏览器安装事件（v1.1.3） ---------- */
+  var deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredInstall = e;
+    refreshInstallUI();
+  });
+  window.addEventListener('appinstalled', function () {
+    deferredInstall = null;
+    refreshInstallUI();
+    toast('已安装到桌面，浏览器菜单将自动移除安装项');
+  });
+  function refreshInstallUI() {
+    var btn = $('#btnInstall');
+    if (!btn) return;
+    var st = $('#installState');
+    if (deferredInstall) {
+      btn.textContent = '立即安装到桌面';
+      if (st && !st.dataset.diag) st.innerHTML = '<span style="color:#3B8E5A">✓ 浏览器已确认可安装为独立应用（无浏览器角标）</span>';
+    } else {
+      btn.textContent = '安装到桌面 / 检查安装条件';
+      if (st && !st.dataset.diag) st.innerHTML = '点击按钮开始安装；若提示不可安装，会自动诊断原因';
+    }
+  }
+
   /* ---------- 工具 ---------- */
   function $(s, r) { return (r || document).querySelector(s); }
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
@@ -507,10 +532,11 @@
         '<div class="set-row" id="btnClear" style="cursor:pointer"><span style="color:#E25563">' + ic('fa-solid fa-trash') + ' 清空全部数据</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
       '</div>' +
       '<div class="card"><div class="card-title">安装为 App</div>' +
-        '<div style="font-size:13px;color:var(--text-sub);line-height:1.9">' +
-        '安卓：Chrome 打开本页 → 菜单 →「添加到主屏幕」<br>' +
+        '<button class="btn btn-primary" id="btnInstall" style="width:100%">安装到桌面 / 检查安装条件</button>' +
+        '<div id="installState" style="font-size:12px;color:var(--text-sub);margin-top:8px;line-height:1.8"></div>' +
+        '<div style="font-size:13px;color:var(--text-sub);line-height:1.9;margin-top:6px">' +
         'iPhone：Safari 打开本页 → 分享 →「添加到主屏幕」<br>' +
-        '打包 APK：把本文件夹部署到 GitHub Pages / Vercel，再到 pwabuilder.com 输入网址一键生成。</div>' +
+        '打包 APK：部署后到 pwabuilder.com 输入网址一键生成。</div>' +
       '</div>' +
       '<div class="empty-tip">记账本 v' + Store.VERSION + ' · 大学生的记账小伙伴 · 数据保存在本机</div>';
 
@@ -528,6 +554,69 @@
       applyTheme();
     });
     $('#btnCatManage').addEventListener('click', openCategoryManage);
+    /* v1.1.3：安装到桌面 / 诊断 */
+    $('#btnInstall').addEventListener('click', function () {
+      if (deferredInstall) {
+        deferredInstall.prompt();
+        deferredInstall.userChoice.then(function () {
+          deferredInstall = null;
+          refreshInstallUI();
+        });
+        return;
+      }
+      runInstallDiagnosis();
+    });
+    refreshInstallUI();
+
+  /* v1.1.3：PWA 安装条件诊断（renderSettings 内部函数，声明提升可用），逐项显示卡在哪一步 */
+  function runInstallDiagnosis() {
+    var el = $('#installState');
+    if (!el) return;
+    el.dataset.diag = '1';
+    el.textContent = '正在检查…';
+    var p = location.protocol;
+    var host = location.hostname;
+    var checks = [];
+    if (p === 'file:') {
+      checks.push('<span style="color:#E25563">✗ 双击文件打开（file://），浏览器读不到应用配置，只能创建带角标的快捷方式</span>');
+      checks.push('<span style="color:#5F5E5A">→ 解决：双击文件夹里的「启动记账本.bat」，访问 http://localhost:8765 后再安装</span>');
+    } else if (p !== 'https:' && !(p === 'http:' && (host === 'localhost' || host === '127.0.0.1'))) {
+      checks.push('<span style="color:#E25563">✗ 通过 ' + p + '//' + host + ' 访问，只有 https 网址或 localhost 支持安装为应用</span>');
+      checks.push('<span style="color:#5F5E5A">→ 解决：手机请访问部署后的 https 网址（GitHub Pages / Vercel）</span>');
+    } else {
+      checks.push('<span style="color:#3B8E5A">✓ 访问方式 ' + host + ' 支持安装</span>');
+    }
+    var swJob = (p === 'http:' || p === 'https:') && navigator.serviceWorker
+      ? navigator.serviceWorker.getRegistrations().then(function (rs) {
+          if (rs.length) checks.push('<span style="color:#3B8E5A">✓ 离线服务已注册</span>');
+          else checks.push('<span style="color:#E25563">✗ 离线服务未注册，请刷新页面再试</span>');
+        }).catch(function () {
+          checks.push('<span style="color:#E25563">✗ 离线服务不可用（协议受限）</span>');
+        })
+      : Promise.resolve();
+    var manJob = fetch('manifest.webmanifest').then(function (r) {
+      if (!r.ok) { checks.push('<span style="color:#E25563">✗ 应用配置加载失败（' + r.status + '），检查文件是否上传完整</span>'); return null; }
+      checks.push('<span style="color:#3B8E5A">✓ 应用配置正常</span>');
+      return r.json();
+    }).then(function (m) {
+      if (!m || !m.icons) return null;
+      return Promise.all(m.icons.map(function (ic2) {
+        return fetch(ic2.src).then(function (r) {
+          checks.push(r.ok
+            ? '<span style="color:#3B8E5A">✓ 图标 ' + ic2.src + '</span>'
+            : '<span style="color:#E25563">✗ 图标 ' + ic2.src + ' 无法加载（' + r.status + '），icons 文件夹没上传完整</span>');
+        });
+      }));
+    }).catch(function () {
+      checks.push('<span style="color:#E25563">✗ 应用配置无法访问，检查文件是否上传完整</span>');
+    });
+    Promise.all([swJob, manJob]).then(function () {
+      setTimeout(function () {
+        if (deferredInstall) checks.push('<span style="color:#3B8E5A">✓ 一切就绪，点上方「立即安装到桌面」即可</span>');
+        el.innerHTML = checks.join('<br>');
+      }, 60);
+    });
+  }
     $('#btnExport').addEventListener('click', function () {
       var blob = new Blob([Store.exportJSON()], { type: 'application/json' });
       var a = document.createElement('a');

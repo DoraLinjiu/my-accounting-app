@@ -1,4 +1,4 @@
-var CACHE = 'jizhangben-v1.1.2';
+var CACHE = 'jizhangben-v1.1.3';
 /* Font Awesome CDN 资源：单独预缓存，失败不影响 App 本体离线可用 */
 var FA_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',
