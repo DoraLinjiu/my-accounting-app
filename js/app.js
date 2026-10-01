@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  /* ---------- PWA 安装：捕获浏览器安装事件（v1.1.3） ---------- */
+  /* ---------- PWA 安装：捕获浏览器安装事件（v1.1） ---------- */
   var deferredInstall = null;
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
@@ -554,7 +554,7 @@
       applyTheme();
     });
     $('#btnCatManage').addEventListener('click', openCategoryManage);
-    /* v1.1.3：安装到桌面 / 诊断 */
+    /* v1.1：安装到桌面 / 诊断 */
     $('#btnInstall').addEventListener('click', function () {
       if (deferredInstall) {
         deferredInstall.prompt();
@@ -568,7 +568,7 @@
     });
     refreshInstallUI();
 
-  /* v1.1.3：PWA 安装条件诊断（renderSettings 内部函数，声明提升可用），逐项显示卡在哪一步 */
+  /* v1.1：PWA 安装条件诊断（renderSettings 内部函数，声明提升可用），逐项显示卡在哪一步 */
   function runInstallDiagnosis() {
     var el = $('#installState');
     if (!el) return;

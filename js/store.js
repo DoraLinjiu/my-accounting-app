@@ -1,7 +1,7 @@
 /* ===== 数据层：localStorage 持久化 ===== */
 var Store = (function () {
   var KEY = 'macaron-ledger-v1';
-  var VERSION = '1.1.0';
+  var VERSION = '1.1';
 
   /* 图标一律用 Font Awesome 6 类名（fa-solid/fa-brands + fa-xxx） */
   var ICON_TAG = 'fa-solid fa-tag';

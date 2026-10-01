@@ -1,25 +1,52 @@
 @echo off
-chcp 65001 >nul
 cd /d "%~dp0"
-title Dora 记账本 - 本地服务
+title JiZhangBen - local server
 
 set PYEXE=C:\Users\28786\.workbuddy\binaries\python\envs\default\Scripts\python.exe
 if not exist "%PYEXE%" set PYEXE=C:\Python314\python.exe
 if not exist "%PYEXE%" set PYEXE=python
 
+rem ---------------------------------------------------------------
+rem Mirror the GitHub Pages URL shape locally.
+rem manifest start_url / scope are /my-accounting-app/ , so the app
+rem is also served under that same path here. Otherwise an app
+rem installed from localhost would open a 404 page.
+rem A directory junction is used, which needs no admin rights.
+rem (This file is ASCII-only on purpose: Chinese text in a .bat gets
+rem  mis-decoded under a non-UTF8 console codepage and corrupts the
+rem  surrounding if-blocks.)
+rem ---------------------------------------------------------------
+set APPNAME=my-accounting-app
+set APPDIR=%~dp0
+if "%APPDIR:~-1%"=="\" set APPDIR=%APPDIR:~0,-1%
+set SERVEROOT=%TEMP%\jizhangben-serve
+
+if not exist "%SERVEROOT%" mkdir "%SERVEROOT%" >nul 2>&1
+if not exist "%SERVEROOT%\%APPNAME%\index.html" (
+  if exist "%SERVEROOT%\%APPNAME%" rmdir "%SERVEROOT%\%APPNAME%" >nul 2>&1
+  mklink /J "%SERVEROOT%\%APPNAME%" "%APPDIR%" >nul 2>&1
+)
+
+if exist "%SERVEROOT%\%APPNAME%\index.html" (
+  set OPENURL=http://localhost:8765/%APPNAME%/
+) else (
+  set SERVEROOT=%APPDIR%
+  set OPENURL=http://localhost:8765/index.html
+)
+
 echo.
 echo   ========================================
-echo      Dora 记账本  本地服务已启动
-echo      地址: http://localhost:8765
+echo      JiZhangBen  local server is running
+echo      URL: %OPENURL%
 echo.
-echo      安装为桌面应用:
-echo        浏览器右上角菜单 -^> 安装
-echo      (不要用「创建快捷方式」, 那样带浏览器角标)
+echo      Install as a desktop app:
+echo        browser menu  -^>  Install app
+echo      Do NOT use "Create shortcut" (that adds a browser badge).
 echo.
-echo      关闭本窗口即停止服务
+echo      Close this window to stop the server.
 echo   ========================================
 echo.
 
-start "Dora Server" /min "%PYEXE%" -m http.server 8765 --bind 127.0.0.1
+start "JiZhangBen Server" /min "%PYEXE%" -m http.server 8765 --bind 127.0.0.1 --directory "%SERVEROOT%"
 timeout /t 2 /nobreak >nul
-start "" "http://localhost:8765/index.html"
+start "" "%OPENURL%"
