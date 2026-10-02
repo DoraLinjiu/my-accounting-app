@@ -2,30 +2,13 @@
 (function () {
   'use strict';
 
-  /* ---------- PWA 安装：捕获浏览器安装事件（v1.1） ---------- */
-  var deferredInstall = null;
-  window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault();
-    deferredInstall = e;
-    refreshInstallUI();
-  });
+  /* ---------- PWA：安装完成提示（v1.3） ----------
+     这里刻意不再监听 beforeinstallprompt、也不再调用 preventDefault：
+     一旦拦截了这个事件却又不调用 prompt()，浏览器自己的「安装应用」入口就会被我们压掉。
+     安装入口交给浏览器原生 UI（地址栏安装图标 / 菜单「安装应用」）。 */
   window.addEventListener('appinstalled', function () {
-    deferredInstall = null;
-    refreshInstallUI();
-    toast('已安装到桌面，浏览器菜单将自动移除安装项');
+    toast('已安装到桌面，可从桌面图标直接打开');
   });
-  function refreshInstallUI() {
-    var btn = $('#btnInstall');
-    if (!btn) return;
-    var st = $('#installState');
-    if (deferredInstall) {
-      btn.textContent = '立即安装到桌面';
-      if (st && !st.dataset.diag) st.innerHTML = '<span style="color:#3B8E5A">✓ 浏览器已确认可安装为独立应用（无浏览器角标）</span>';
-    } else {
-      btn.textContent = '安装到桌面 / 检查安装条件';
-      if (st && !st.dataset.diag) st.innerHTML = '点击按钮开始安装；若提示不可安装，会自动诊断原因';
-    }
-  }
 
   /* ---------- 工具 ---------- */
   function $(s, r) { return (r || document).querySelector(s); }
@@ -163,9 +146,9 @@
       '<div class="card">' +
         '<div class="card-title">本月汇总<span class="more">' + ym.replace('-', ' 年 ') + ' 月</span></div>' +
         '<div class="month-sum">' +
-          '<div class="ms-item"><span class="ms-label">总支出</span><b class="ms-exp">¥' + fmt(sumMonth.expense) + '</b></div>' +
-          '<div class="ms-item"><span class="ms-label">总收入</span><b class="ms-inc">¥' + fmt(sumMonth.income) + '</b></div>' +
-          '<div class="ms-item"><span class="ms-label">结余</span><b>¥' + fmt(monthLeft) + '</b></div>' +
+          '<div class="ms-item"><span class="ms-label">总支出</span><b class="ms-exp"><span class="cur">¥</span>' + fmt(sumMonth.expense) + '</b></div>' +
+          '<div class="ms-item"><span class="ms-label">总收入</span><b class="ms-inc"><span class="cur">¥</span>' + fmt(sumMonth.income) + '</b></div>' +
+          '<div class="ms-item"><span class="ms-label">结余</span><b><span class="cur">¥</span>' + fmt(monthLeft) + '</b></div>' +
         '</div>' +
       '</div>' +
       '<div class="card"><div class="card-title">最近记录<span class="more">点条目可编辑 / 删除</span></div>' + listHtml + '</div>';
@@ -192,9 +175,12 @@
       amt = (t.kind === 'income' ? '+' : '-') + '¥' + fmt(t.amount);
       cls = t.kind === 'income' ? 'income' : 'expense';
     }
-    var bg = t.kind === 'transfer' ? 'var(--blue)' : ((Store.getCategory(t.categoryId) || {}).color || '#eee');
+    /* 图标气泡：底色与图标同取马卡龙色相。
+       注意这里用 background-color（而不是 background 简写）——简写会把 CSS 里
+       叠的那层降饱和白雾（background-image）重置掉；图标再统一压深成「同色系深一度」 */
+    var tint = t.kind === 'transfer' ? 'var(--blue)' : ((Store.getCategory(t.categoryId) || {}).color || '#E6DEE1');
     return '<div class="tx-item" data-id="' + t.id + '">' +
-      '<div class="tx-icon" style="background:' + bg + '">' + icon + '</div>' +
+      '<div class="tx-icon" style="background-color:' + tint + ';color:' + tint + '">' + icon + '</div>' +
       '<div class="tx-main"><div class="tx-name">' + esc(name) + '</div><div class="tx-sub">' + esc(sub) + '</div></div>' +
       '<div class="tx-amount ' + cls + '">' + amt + '</div></div>';
   }
@@ -400,7 +386,7 @@
     $('#page-stats').innerHTML =
       '<div class="stats-tabs">' + tabs + '</div>' +
       dateCtl +
-      '<div class="hero" style="background:linear-gradient(135deg,var(--blue),var(--green))">' +
+      '<div class="hero" style="background:linear-gradient(135deg,var(--hero-b),var(--hero-c))">' +
         '<div class="label">' + rg.from + ' ~ ' + rg.to + '</div>' +
         '<div class="hero-row" style="margin-top:10px">' +
           '<div class="hero-pill">收入<b>¥' + fmt(sum.income) + '</b></div>' +
@@ -434,8 +420,8 @@
     var accs = Store.getAccounts();
     var total = Store.totalAssets();
     var cards = accs.map(function (a) {
-      return '<div class="acc-card" data-id="' + a.id + '" style="background:' + a.color + '">' +
-        '<div class="acc-icon">' + iconOf(a, FA_CARD) + '</div>' +
+      return '<div class="acc-card" data-id="' + a.id + '">' +
+        '<div class="acc-icon" style="color:' + (a.color || '#BAE1FF') + '">' + iconOf(a, FA_CARD) + '</div>' +
         '<div class="acc-main"><div class="acc-name">' + esc(a.name) + '</div>' +
         '<div class="acc-bal">¥ ' + fmt(Store.accountBalance(a.id)) + '</div></div>' +
         '<div class="drag-handle" title="拖拽排序">' + ic('fa-solid fa-grip-lines') + '</div>' +
@@ -529,14 +515,20 @@
       '<div class="card"><div class="card-title">数据</div>' +
         '<div class="set-row" id="btnExport" style="cursor:pointer"><span>' + ic('fa-solid fa-file-export') + ' 导出备份 (JSON)</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
         '<div class="set-row" id="btnImport" style="cursor:pointer"><span>' + ic('fa-solid fa-file-import') + ' 导入备份</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
-        '<div class="set-row" id="btnClear" style="cursor:pointer"><span style="color:#E25563">' + ic('fa-solid fa-trash') + ' 清空全部数据</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
+        '<div class="set-row" id="btnClear" style="cursor:pointer"><span style="color:var(--expense)">' + ic('fa-solid fa-trash') + ' 清空全部数据</span><span>' + ic('fa-solid fa-chevron-right') + '</span></div>' +
       '</div>' +
+      /* v1.3：这一栏不再放安装按钮（自建按钮会压掉浏览器的原生安装入口），只保留说明 */
       '<div class="card"><div class="card-title">安装为 App</div>' +
-        '<button class="btn btn-primary" id="btnInstall" style="width:100%">安装到桌面 / 检查安装条件</button>' +
-        '<div id="installState" style="font-size:12px;color:var(--text-sub);margin-top:8px;line-height:1.8"></div>' +
-        '<div style="font-size:13px;color:var(--text-sub);line-height:1.9;margin-top:6px">' +
-        'iPhone：Safari 打开本页 → 分享 →「添加到主屏幕」<br>' +
-        '打包 APK：部署后到 pwabuilder.com 输入网址一键生成。</div>' +
+        '<div class="set-note">' +
+        ic('fa-brands fa-android') + ' 安卓 Chrome：打开 https 网址 → 右上角菜单 →「安装应用」<br>' +
+        ic('fa-brands fa-chrome') + ' 电脑 Chrome：地址栏右侧的安装图标，或菜单 →「安装记账本…」<br>' +
+        ic('fa-brands fa-apple') + ' iPhone：Safari 打开 → 分享 →「添加到主屏幕」<br>' +
+        ic('fa-solid fa-box-open') + ' 打包 APK：部署后到 pwabuilder.com 输入网址一键生成' +
+        '</div>' +
+        '<div class="set-note-sub">' +
+        '注意：只有 https 网址（或本机 localhost）才会出现「安装应用」；' +
+        '用局域网 http 地址打开只会得到带浏览器角标的快捷方式。' +
+        '</div>' +
       '</div>' +
       '<div class="empty-tip">记账本 v' + Store.VERSION + ' · 大学生的记账小伙伴 · 数据保存在本机</div>';
 
@@ -554,69 +546,6 @@
       applyTheme();
     });
     $('#btnCatManage').addEventListener('click', openCategoryManage);
-    /* v1.1：安装到桌面 / 诊断 */
-    $('#btnInstall').addEventListener('click', function () {
-      if (deferredInstall) {
-        deferredInstall.prompt();
-        deferredInstall.userChoice.then(function () {
-          deferredInstall = null;
-          refreshInstallUI();
-        });
-        return;
-      }
-      runInstallDiagnosis();
-    });
-    refreshInstallUI();
-
-  /* v1.1：PWA 安装条件诊断（renderSettings 内部函数，声明提升可用），逐项显示卡在哪一步 */
-  function runInstallDiagnosis() {
-    var el = $('#installState');
-    if (!el) return;
-    el.dataset.diag = '1';
-    el.textContent = '正在检查…';
-    var p = location.protocol;
-    var host = location.hostname;
-    var checks = [];
-    if (p === 'file:') {
-      checks.push('<span style="color:#E25563">✗ 双击文件打开（file://），浏览器读不到应用配置，只能创建带角标的快捷方式</span>');
-      checks.push('<span style="color:#5F5E5A">→ 解决：双击文件夹里的「启动记账本.bat」，访问 http://localhost:8765 后再安装</span>');
-    } else if (p !== 'https:' && !(p === 'http:' && (host === 'localhost' || host === '127.0.0.1'))) {
-      checks.push('<span style="color:#E25563">✗ 通过 ' + p + '//' + host + ' 访问，只有 https 网址或 localhost 支持安装为应用</span>');
-      checks.push('<span style="color:#5F5E5A">→ 解决：手机请访问部署后的 https 网址（GitHub Pages / Vercel）</span>');
-    } else {
-      checks.push('<span style="color:#3B8E5A">✓ 访问方式 ' + host + ' 支持安装</span>');
-    }
-    var swJob = (p === 'http:' || p === 'https:') && navigator.serviceWorker
-      ? navigator.serviceWorker.getRegistrations().then(function (rs) {
-          if (rs.length) checks.push('<span style="color:#3B8E5A">✓ 离线服务已注册</span>');
-          else checks.push('<span style="color:#E25563">✗ 离线服务未注册，请刷新页面再试</span>');
-        }).catch(function () {
-          checks.push('<span style="color:#E25563">✗ 离线服务不可用（协议受限）</span>');
-        })
-      : Promise.resolve();
-    var manJob = fetch('manifest.webmanifest').then(function (r) {
-      if (!r.ok) { checks.push('<span style="color:#E25563">✗ 应用配置加载失败（' + r.status + '），检查文件是否上传完整</span>'); return null; }
-      checks.push('<span style="color:#3B8E5A">✓ 应用配置正常</span>');
-      return r.json();
-    }).then(function (m) {
-      if (!m || !m.icons) return null;
-      return Promise.all(m.icons.map(function (ic2) {
-        return fetch(ic2.src).then(function (r) {
-          checks.push(r.ok
-            ? '<span style="color:#3B8E5A">✓ 图标 ' + ic2.src + '</span>'
-            : '<span style="color:#E25563">✗ 图标 ' + ic2.src + ' 无法加载（' + r.status + '），icons 文件夹没上传完整</span>');
-        });
-      }));
-    }).catch(function () {
-      checks.push('<span style="color:#E25563">✗ 应用配置无法访问，检查文件是否上传完整</span>');
-    });
-    Promise.all([swJob, manJob]).then(function () {
-      setTimeout(function () {
-        if (deferredInstall) checks.push('<span style="color:#3B8E5A">✓ 一切就绪，点上方「立即安装到桌面」即可</span>');
-        el.innerHTML = checks.join('<br>');
-      }, 60);
-    });
-  }
     $('#btnExport').addEventListener('click', function () {
       var blob = new Blob([Store.exportJSON()], { type: 'application/json' });
       var a = document.createElement('a');
@@ -663,7 +592,7 @@
     function rows(list) {
       return list.map(function (c) {
         return '<div class="cat-manage-row" data-id="' + c.id + '">' +
-          '<span class="cat-bubble" style="background:' + c.color + ';width:36px;height:36px;border-radius:11px">' + ic(faOf(c, FA_TAG)) + '</span>' +
+          '<span class="cat-bubble" style="background-color:' + (c.color || '#F1EEC6') + ';color:' + (c.color || '#F1EEC6') + ';width:36px;height:36px;border-radius:11px">' + ic(faOf(c, FA_TAG)) + '</span>' +
           '<span>' + esc(c.name) + '</span>' +
           '<button class="tx-del" data-del="' + c.id + '">' + ic('fa-solid fa-xmark') + '</button>' +
           '<span class="drag-handle">' + ic('fa-solid fa-grip-lines') + '</span></div>';
@@ -759,7 +688,7 @@
     if (!isTransfer) {
       var grid = cats.map(function (c) {
         return '<div class="cat-cell ' + (rec.categoryId === c.id ? 'on' : '') + '" data-cat="' + c.id + '">' +
-          '<div class="cat-bubble" style="background:' + c.color + '">' + ic(faOf(c, FA_TAG)) + '</div>' +
+          '<div class="cat-bubble" style="background-color:' + (c.color || '#F1EEC6') + ';color:' + (c.color || '#F1EEC6') + '">' + ic(faOf(c, FA_TAG)) + '</div>' +
           '<span>' + esc(c.name) + '</span></div>';
       }).join('');
       html += '<div class="field-label">分类</div><div class="cat-grid">' + grid + '</div>';

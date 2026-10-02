@@ -11,22 +11,47 @@
   --bg: #FFF7F8;
   --card: #FFFFFF;
   --text: #3A3438;
-  --text-sub: #9A8F95;
+  --text-sub: #7C6F76;
   --line: #F3E8EA;
   --shadow: 0 6px 18px rgba(255, 143, 163, 0.14);
   --shadow-soft: 0 3px 10px rgba(90, 60, 70, 0.08);
   --radius: 18px;
-  --income: #3FAE6A;
-  --expense: #FF8FA3;
+  /* v1.3：金额/强调文字改用「可读版」语义色。
+     原来的亮粉 #FF8FA3 在白底只有 2.2:1、亮绿 #3FAE6A 只有 2.8:1，
+     金额这种最该看清的字反而最虚；现在压深到 4.9:1 左右。 */
+  --accent-ink: #C0455A;
+  --income: #2A7F4F;
+  --expense: var(--accent-ink);
+
+  /* ===== v1.1 UI 精致化：低饱和马卡龙 + 墨色文字 ===== */
+  /* 低饱和马卡龙（保留色相，降饱和度），用于大色块渐变 */
+  --pink-soft: #F5C9D0;
+  --blue-soft: #CDE5F8;
+  --green-soft: #D3EFDD;
+  --yellow-soft: #F1EEC6;
+  /* Hero 渐变三色（低饱和，数字用墨色才有对比） */
+  --hero-a: #F5C9D0;
+  --hero-b: #CDE5F8;
+  --hero-c: #D3EFDD;
+  /* 墨色文字：浅底上的主/次文字 */
+  --ink: #3F3539;
+  --ink-sub: #5F5359;
+  /* 比 --line 稍实的浅灰描边（白卡片用） */
+  --line-strong: #ECE3E6;
 }
 html[data-theme="dark"] {
   --bg: #1C1A1F;
   --card: #28252D;
   --text: #F0E9EC;
-  --text-sub: #8E848B;
+  --text-sub: #9A9098;
   --line: #3A3540;
   --shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   --shadow-soft: 0 3px 10px rgba(0, 0, 0, 0.3);
+  --line-strong: #3E3944;
+  /* v1.3：深色底上语义色要提亮才看得清 */
+  --income: #6FD08C;
+  --expense: #FF9AA5;
+  --accent-ink: #FF9AA5;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -48,11 +73,14 @@ body {
   color: #fff; font-weight: 700;
   flex: 0 0 auto;
 }
-.topbar-title { font-size: 18px; text-shadow: 0 1px 3px rgba(0,0,0,.15); }
+/* 顶栏标题：白字落在浅马卡龙底上，实测底色只有 1.7:1，
+   这里不动顶栏配色（保留马卡龙），改用更实的暗色描边给白字"描一圈"，
+   让字缘和底色拉开层次；若要求严格达标的做法是给顶栏加深色蒙版。 */
+.topbar-title { font-size: 18px; text-shadow: 0 1px 2px rgba(0,0,0,.45), 0 0 6px rgba(0,0,0,.35); }
 .topbar-month { font-size: 13px; opacity: .95; }
 
 /* 页面容器 */
-.page { flex: 1 1 auto; overflow-y: auto; padding: 14px 14px 96px; -webkit-overflow-scrolling: touch; }
+.page { flex: 1 1 auto; overflow-y: auto; padding: 16px 16px 100px; -webkit-overflow-scrolling: touch; }
 .hidden { display: none !important; }
 
 /* 卡片 */
@@ -61,26 +89,26 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   transition: background .25s;
 }
 .card-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 .card-title .more { font-size: 12px; color: var(--text-sub); font-weight: 400; }
 
-/* 首页总览 */
+/* 首页总览：低饱和马卡龙底 + 墨色大数字（数字是绝对主角） */
 .hero {
-  background: linear-gradient(135deg, var(--pink), var(--blue));
-  color: #fff; border-radius: 20px; padding: 20px;
-  box-shadow: var(--shadow); margin-bottom: 14px;
+  background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
+  color: var(--ink); border-radius: 20px; padding: 18px 20px 20px;
+  box-shadow: var(--shadow-soft); margin-bottom: 16px;
 }
-.hero .label { font-size: 13px; opacity: .9; }
-.hero .total { font-size: 34px; font-weight: 800; margin: 4px 0 12px; letter-spacing: 1px; }
+.hero .label { font-size: 12.5px; color: var(--ink-sub); letter-spacing: .3px; }
+.hero .total { font-size: 40px; font-weight: 800; margin: 6px 0 14px; letter-spacing: -.5px; color: var(--ink); line-height: 1.08; }
 .hero-row { display: flex; gap: 10px; }
 .hero-pill {
-  flex: 1; background: rgba(255,255,255,.25); border-radius: 14px;
-  padding: 8px 12px; font-size: 12px; backdrop-filter: blur(4px);
+  flex: 1; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.75);
+  border-radius: 14px; padding: 9px 12px; font-size: 11.5px; color: var(--ink-sub);
 }
-.hero-pill b { display: block; font-size: 15px; margin-top: 2px; }
+.hero-pill b { display: block; font-size: 15px; margin-top: 3px; color: var(--ink); font-weight: 700; }
 
 /* 交易列表 */
 .tx-item {
@@ -116,13 +144,15 @@ body {
   cursor: pointer; font-family: inherit; padding: 2px 0;
 }
 .nav-icon { font-size: 20px; }
-.nav-item.active { color: var(--pink-deep); font-weight: 700; }
+.nav-item.active { color: var(--accent-ink); font-weight: 700; }
+/* 「+」按钮：改用主题同款低饱和渐变 + 卡片色描边，减弱原来的粉色高饱和冲突感 */
 .nav-add-circle {
-  width: 46px; height: 46px; border-radius: 50%; margin-top: -22px;
-  background: linear-gradient(135deg, var(--pink-deep), var(--pink));
-  color: #fff; font-size: 26px; font-weight: 700;
+  width: 44px; height: 44px; border-radius: 50%; margin-top: -20px;
+  background: linear-gradient(135deg, var(--pink-soft), var(--blue-soft));
+  color: var(--accent-ink); font-size: 22px; font-weight: 700;
+  border: 2px solid var(--card);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 6px 14px rgba(255,143,163,.45);
+  box-shadow: 0 4px 10px rgba(190, 112, 128, .22);
 }
 
 /* 弹层 */
@@ -190,9 +220,11 @@ body {
   font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit;
   margin-top: 16px;
 }
-.btn-primary { background: linear-gradient(135deg, var(--pink-deep), var(--pink)); color: #fff; box-shadow: 0 6px 14px rgba(255,143,163,.4); }
+/* v1.3：主按钮改用更深的玫瑰渐变——原来白字落在亮粉上只有 2.2:1，
+   「保存」这种最关键的按钮反而最看不清；实测现在 5.2:1 / 4.6:1 */
+.btn-primary { background: linear-gradient(135deg, #B8435A, #C24E64); color: #fff; box-shadow: 0 6px 14px rgba(184,67,90,.26); }
 .btn-ghost { background: var(--bg); color: var(--text-sub); }
-.btn-danger { background: #FFE3E6; color: #E25563; }
+.btn-danger { background: #FFE3E6; color: #B23A48; }
 .btn:disabled { opacity: .5; }
 html[data-theme="dark"] .btn-danger { background: #4A2B30; color: #FF9AA5; }
 
@@ -203,30 +235,30 @@ html[data-theme="dark"] .btn-danger { background: #4A2B30; color: #FF9AA5; }
   background: var(--bg); color: var(--text); cursor: pointer; font-family: inherit;
 }
 .calc button.op { background: var(--blue); color: #2D6CA8; }
-.calc button.eq { background: linear-gradient(135deg, var(--pink-deep), var(--pink)); color: #fff; }
+.calc button.eq { background: linear-gradient(135deg, #B8435A, #C24E64); color: #fff; }
 .calc button:active { filter: brightness(.94); }
 html[data-theme="dark"] .calc button.op { color: #BFE0FF; }
 
-/* 账户卡片 */
+/* 账户卡片：统一白底 + 浅灰描边，颜色只留给图标 */
 .acc-card {
-  border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
-  color: #4A3F45; box-shadow: var(--shadow-soft);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 16px;
+  background: var(--card); border: 1px solid var(--line-strong); color: var(--text);
   display: flex; align-items: center; gap: 12px;
   position: relative;
 }
 .acc-icon { font-size: 26px; }
 .acc-main { flex: 1; }
-.acc-name { font-size: 14px; font-weight: 700; opacity: .85; }
-.acc-bal { font-size: 20px; font-weight: 800; margin-top: 2px; }
+.acc-name { font-size: 13px; font-weight: 600; color: var(--text-sub); }
+.acc-bal { font-size: 20px; font-weight: 800; margin-top: 3px; color: var(--text); }
 .drag-handle {
-  cursor: grab; color: rgba(90,70,80,.4); font-size: 18px; padding: 6px;
+  cursor: grab; color: var(--text-sub); font-size: 18px; padding: 6px;
   touch-action: none; user-select: none;
 }
 .sorting .acc-card { transition: transform .15s; }
 .acc-card.dragging { opacity: .85; z-index: 20; box-shadow: 0 10px 24px rgba(0,0,0,.22); }
 
 /* 统计 */
-.stats-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.stats-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
 .stats-tabs button {
   flex: 1; border: none; border-radius: 12px; padding: 9px 0; font-size: 13px;
   background: var(--card); color: var(--text-sub); font-weight: 600; cursor: pointer;
@@ -244,6 +276,15 @@ html[data-theme="dark"] .calc button.op { color: #BFE0FF; }
   padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 14px;
 }
 .set-row:last-child { border-bottom: none; }
+/* v1.3：设置页的纯说明文字（安装为 App 卡片没有按钮了，靠这两行讲清楚） */
+.set-note {
+  font-size: 13px; color: var(--text); line-height: 1.95; font-weight: 500;
+}
+.set-note i { color: var(--accent-ink); font-size: 12px; margin-right: 2px; }
+.set-note-sub {
+  font-size: 12px; color: var(--text-sub); line-height: 1.8;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+}
 .switch { position: relative; width: 46px; height: 26px; }
 .switch input { display: none; }
 .switch .track {
@@ -253,7 +294,7 @@ html[data-theme="dark"] .calc button.op { color: #BFE0FF; }
   content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
   border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.2); transition: .2s;
 }
-.switch input:checked + .track { background: var(--pink-deep); }
+.switch input:checked + .track { background: var(--accent-ink); }
 .switch input:checked + .track::after { left: 23px; }
 
 /* 分类管理行 */
@@ -279,32 +320,39 @@ html[data-theme="dark"] .calc button.op { color: #BFE0FF; }
 /* 删除按钮 */
 .tx-del { color: var(--text-sub); font-size: 12px; border: none; background: none; cursor: pointer; padding: 4px; }
 
-/* ===== v1.1 新增 ===== */
-/* 顶栏昵称 —— 方案B：半透明深色「毛玻璃」胶囊（白字有靠山，不再刺眼）
-   备选（换方案时只改下面这几行即可）：
-   方案A 深色柔字 → color:#5C4033; background:none; border:none; text-shadow:none;
-   方案C 同色系深一度 → color:#C97B8B; background:none; border:none; text-shadow:none; */
+/* ===== v1.3 ===== */
+/* 顶栏昵称：白字 + 半透明深色毛玻璃胶囊，让文字"有靠山"。
+   透明度 .50 是按真实截图采样定的：顶栏右端是最浅的马卡龙绿，
+   α 取 .15（举例值）时白字只有约 1.8:1、.36 实测 3.1:1，都看不清；
+   .50 实测约 4.8:1，且仍然透出底色，是"半透明深色胶囊"。
+   另加模糊 + 极细白描边 + 文字阴影，边缘更柔、不再刺眼。
+   （想更淡一点可以调这一行的 .50，但白字会随之变糊。） */
 .topbar-nick {
   font-size: 13px; font-weight: 600; color: #fff;
-  background: rgba(0, 0, 0, .22);
-  -webkit-backdrop-filter: blur(8px) saturate(1.15);
-  backdrop-filter: blur(8px) saturate(1.15);
-  border: 1px solid rgba(255, 255, 255, .38);
-  padding: 4px 13px; border-radius: 14px;
+  background: rgba(0, 0, 0, .50);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  backdrop-filter: blur(8px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, .30);
+  border-radius: 13px;
+  padding: 4px 12px;
   max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .22);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .10);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .30);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .12);
   transition: background .2s;
 }
 
-/* 本月汇总卡片 */
+/* 本月汇总卡片：标签小、数字大且重，层级明确拉开。
+   字号定在 18px（原 15px）是量过的：三栏每栏可用宽度只有 ~95px，
+   再大就会出现「¥1,500.00」这种常见金额换行的难看情况。
+   货币符号单独缩小，既省宽度也更精致。 */
 .month-sum { display: flex; gap: 8px; }
 .ms-item {
   flex: 1; background: var(--bg); border-radius: 14px;
-  padding: 11px 6px; text-align: center; min-width: 0;
+  padding: 12px 4px; text-align: center; min-width: 0;
 }
-.ms-label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; }
-.ms-item b { font-size: 15px; font-weight: 800; word-break: break-all; }
+.ms-label { display: block; font-size: 11px; color: var(--text-sub); margin-bottom: 7px; letter-spacing: .4px; }
+.ms-item b { font-size: 18px; font-weight: 800; letter-spacing: -.3px; line-height: 1.2; word-break: break-all; }
+.ms-item b .cur { font-size: .72em; font-weight: 600; letter-spacing: 0; }
 .ms-exp { color: var(--expense); }
 .ms-inc { color: var(--income); }
 
@@ -334,15 +382,20 @@ textarea.input.ta {
 /* ===== Font Awesome 图标（v1.1）===== */
 /* 默认：马卡龙粉，适合白/浅色卡面 */
 .fa-solid, .fa-brands, .fa-regular { color: var(--pink-deep); vertical-align: middle; }
-/* 落在马卡龙彩底上的图标：半透明深色 → 自动呈现「同色系深一度」，粉底不再糊成一片 */
-.tx-icon i, .cat-bubble i { color: rgba(0, 0, 0, .55); }
-/* 渐变底（顶栏 / hero 卡片）：白色 */
+/* 彩底气泡降饱和：叠一层白色薄雾，保留马卡龙色相、去掉刺眼的高饱和感 */
+.tx-icon, .cat-bubble { background-image: linear-gradient(rgba(255,255,255,.46), rgba(255,255,255,.46)); }
+/* 彩底气泡上的图标：取所属分类/账户的马卡龙色相，统一压深成「同色系深一度」，
+   既保留马卡龙色感，又在浅底上清晰可读 */
+.tx-icon i, .cat-bubble i { color: inherit; filter: brightness(.55) saturate(.92); }
+/* 渐变底（顶栏）：白色 */
 .topbar-title i { color: #fff; font-size: 16px; margin-right: 2px; }
-.hero-pill i { color: #fff; font-size: 11px; margin-right: 4px; }
+.hero-pill i { color: inherit; font-size: 11px; margin-right: 4px; }
 /* 底部导航 / 账户卡 / 按钮：跟随各自文字色 */
 .nav-icon i { color: inherit; font-size: 19px; }
 .nav-add-circle i { color: inherit; font-size: 19px; }
-.acc-icon i { color: inherit; font-size: 21px; }
+/* 账户图标：白卡面上压深保证可读；深色主题下保留明亮马卡龙色 */
+.acc-icon i { color: inherit; font-size: 21px; filter: brightness(.58) saturate(.92); }
+html[data-theme="dark"] .acc-icon i { filter: none; }
 .btn i { color: inherit; }
 .chip i { font-size: 12px; }
 .legend-item i { color: var(--text-sub); font-size: 11px; }
@@ -367,6 +420,6 @@ textarea.input.ta {
 }
 .icon-pick-btn i { font-size: 15px; color: rgba(0, 0, 0, .5); }
 .icon-pick-btn.on { border-color: var(--pink-deep); background: rgba(255, 179, 186, .2); }
-.icon-pick-btn.on i { color: var(--pink-deep); }
+.icon-pick-btn.on i { color: var(--accent-ink); }
 html[data-theme="dark"] .icon-pick-btn i { color: rgba(255, 255, 255, .6); }
-html[data-theme="dark"] .icon-pick-btn.on i { color: var(--pink-deep); }
+html[data-theme="dark"] .icon-pick-btn.on i { color: var(--accent-ink); }

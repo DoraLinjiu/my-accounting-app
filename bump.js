@@ -19,7 +19,7 @@ var root = __dirname;
 var targets = [
   { file: 'js/store.js', re: new RegExp("var VERSION = '" + VER + "'", 'g'), label: 'Store.VERSION（设置页底部显示的版本）' },
   { file: 'manifest.webmanifest', re: new RegExp('"version":\\s*"' + VER + '"', 'g'), label: 'manifest version' },
-  { file: 'sw.js', re: new RegExp("var CACHE = 'jizhangben-v" + VER + "'", 'g'), label: 'Service Worker 缓存名' },
+  { file: 'sw.js', re: new RegExp("var CACHE = 'jizhangben-v" + VER + "(-[a-z0-9]+)?'", 'g'), label: 'Service Worker 缓存名' },
   { file: 'index.html', re: new RegExp('\\?v=' + VER, 'g'), label: '静态资源 ?v= 引用' },
   { file: 'README.md', re: new RegExp('# 记账本（PWA 版）v' + VER, 'g'), label: 'README 标题' }
 ];

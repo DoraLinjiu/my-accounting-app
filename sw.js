@@ -1,4 +1,6 @@
-var CACHE = 'jizhangben-v1.1';
+/* 缓存名带版本号：改版本号时这里一起变，老用户的旧缓存才会被清掉。
+   （sw.js 内容不变时浏览器不会重新安装 SW，老用户就会一直拿到旧的 CSS/JS） */
+var CACHE = 'jizhangben-v1.3';
 /* Font Awesome CDN 资源：单独预缓存，失败不影响 App 本体离线可用 */
 var FA_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',
