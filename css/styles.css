@@ -423,3 +423,53 @@ html[data-theme="dark"] .acc-icon i { filter: none; }
 .icon-pick-btn.on i { color: var(--accent-ink); }
 html[data-theme="dark"] .icon-pick-btn i { color: rgba(255, 255, 255, .6); }
 html[data-theme="dark"] .icon-pick-btn.on i { color: var(--accent-ink); }
+
+/* ===== v1.3：期间导航条 / 自定义范围 / 月份选择器 ===== */
+/* 一条 ‹ 标题 › 的期间导航：左右各翻一个周期，点中间标题跳月 */
+.period-nav { display: flex; align-items: center; gap: 6px; }
+.period-nav.pn-lg { margin-bottom: 16px; }
+.pn-btn {
+  width: 30px; height: 30px; flex: 0 0 auto;
+  border: 1px solid var(--line-strong); background: var(--card); color: var(--text-sub);
+  border-radius: 10px; cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+}
+.pn-btn i { font-size: 12px; color: inherit; }
+.pn-btn:active { background: var(--bg); }
+.pn-label {
+  flex: 1 1 auto; min-width: 0;
+  border: none; background: none; cursor: pointer; font-family: inherit;
+  font-size: 15px; font-weight: 700; color: var(--text);
+  padding: 6px 4px; border-radius: 10px; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pn-label:active { background: var(--bg); }
+.pn-static { cursor: default; }
+.period-nav.pn-lg .pn-btn { width: 32px; height: 32px; }
+
+/* 卡片标题右侧的小号版本（首页汇总卡片） */
+.period-nav.pn-sm { gap: 2px; flex: 0 0 auto; }
+.period-nav.pn-sm .pn-btn { width: 24px; height: 24px; border-radius: 8px; }
+.period-nav.pn-sm .pn-btn i { font-size: 10px; }
+.period-nav.pn-sm .pn-label {
+  flex: 0 0 auto; font-size: 12.5px; font-weight: 600;
+  color: var(--text-sub); padding: 4px 2px;
+}
+
+/* 自定义范围：两个日期输入并排 */
+.custom-range { display: flex; gap: 10px; margin-bottom: 16px; }
+.custom-range > div { flex: 1; min-width: 0; }
+.custom-range .field-label { margin: 0 0 6px; }
+.custom-range .input { padding: 9px 10px; font-size: 13px; }
+
+/* 月份选择器：4 列 × 3 行 */
+.month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 2px; }
+.month-cell {
+  border: 1.5px solid var(--line); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 12px 0; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.month-cell.on {
+  border-color: var(--accent-ink); background: rgba(192, 69, 90, .10);
+  color: var(--accent-ink); font-weight: 800;
+}

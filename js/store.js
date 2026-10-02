@@ -182,6 +182,32 @@ var Store = (function () {
     });
     save();
   }
+  /* v1.3：该账户关联了多少条记录（含转入/转出） */
+  function countAccountTx(id) {
+    var n = 0;
+    state.transactions.forEach(function (t) {
+      if (t.accountId === id || t.toAccountId === id) n++;
+    });
+    return n;
+  }
+  /* v1.3：删除账户。
+     opts.mode = 'move' 时把该账户上的**普通收支记录**改挂到 opts.toId，删完重排 order。
+     为什么不搬转账：转账两侧各属一个账户，把被删账户那一侧改挂到目标账户后，
+     目标账户会因为"转出"凭空少一笔钱，极端情况下两侧还都变成同一个账户。
+     所以涉及该账户的转账保持原样，页面显示为「已删除账户」，余额影响不变。*/
+  function deleteAccount(id, opts) {
+    opts = opts || {};
+    var toId = opts.mode === 'move' ? opts.toId : null;
+    if (toId && toId !== id && getAccount(toId)) {
+      state.transactions.forEach(function (t) {
+        if (t.kind === 'transfer') return;   /* 转账不搬，理由见上 */
+        if (t.accountId === id) t.accountId = toId;
+      });
+    }
+    state.accounts = state.accounts.filter(function (a) { return a.id !== id; });
+    state.accounts.forEach(function (a, i) { a.order = i; });
+    save();
+  }
 
   /* ---- 分类 ---- */
   function getCategories(kind) {
@@ -294,6 +320,7 @@ var Store = (function () {
     getAccounts: getAccounts, getAccount: getAccount, accountBalance: accountBalance,
     totalAssets: totalAssets, updateAccount: updateAccount, addAccount: addAccount,
     setAccountBalance: setAccountBalance, reorderAccounts: reorderAccounts,
+    deleteAccount: deleteAccount, countAccountTx: countAccountTx,
     getCategories: getCategories, getCategory: getCategory, addCategory: addCategory,
     updateCategory: updateCategory, reorderCategories: reorderCategories, deleteCategory: deleteCategory,
     getTransactions: getTransactions, addTransaction: addTransaction, deleteTransaction: deleteTransaction,

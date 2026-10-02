@@ -103,7 +103,10 @@
   /* ---------- 首页 ---------- */
   function renderHome() {
     var today = todayStr();
-    var ym = today.slice(0, 7);
+    /* v1.3：汇总卡片显示哪个月由 homeState 决定，可左右翻 */
+    var ym = homeState.ym;
+    var isCurMonth = ym === today.slice(0, 7);
+    var ymLabel = ym.slice(0, 4) + ' 年 ' + (+ym.slice(5, 7)) + ' 月';
     /* v1.1：顶栏显示自定义昵称（默认 Dora） */
     var nickEl = $('#topbarNick');
     if (nickEl) nickEl.textContent = Store.settings().nickname || 'Dora';
@@ -142,9 +145,14 @@
           '<div class="hero-pill">账户数<b>' + Store.getAccounts().length + ' 个</b></div>' +
         '</div>' +
       '</div>' +
-      /* v1.1 新增：本月汇总卡片 */
+      /* v1.1 新增：本月汇总卡片；v1.3 月份可左右翻、点标题跳月 */
       '<div class="card">' +
-        '<div class="card-title">本月汇总<span class="more">' + ym.replace('-', ' 年 ') + ' 月</span></div>' +
+        '<div class="card-title">' + (isCurMonth ? '本月汇总' : '月度汇总') +
+          '<span class="period-nav pn-sm">' +
+            '<button class="pn-btn" id="homePrev">' + ic('fa-solid fa-chevron-left') + '</button>' +
+            '<button class="pn-label" id="homePick">' + ymLabel + '</button>' +
+            '<button class="pn-btn" id="homeNext">' + ic('fa-solid fa-chevron-right') + '</button>' +
+          '</span></div>' +
         '<div class="month-sum">' +
           '<div class="ms-item"><span class="ms-label">总支出</span><b class="ms-exp"><span class="cur">¥</span>' + fmt(sumMonth.expense) + '</b></div>' +
           '<div class="ms-item"><span class="ms-label">总收入</span><b class="ms-inc"><span class="cur">¥</span>' + fmt(sumMonth.income) + '</b></div>' +
@@ -156,6 +164,12 @@
     $$('#page-home .tx-item').forEach(function (el) {
       el.addEventListener('click', function () { openTxEdit(el.getAttribute('data-id')); });
     });
+    /* v1.3：汇总卡片的月份导航 */
+    $('#homePrev').addEventListener('click', function () { homeState.ym = shiftMonth(homeState.ym, -1); renderHome(); });
+    $('#homeNext').addEventListener('click', function () { homeState.ym = shiftMonth(homeState.ym, 1); renderHome(); });
+    $('#homePick').addEventListener('click', function () {
+      openMonthPicker(homeState.ym, function (ym2) { homeState.ym = ym2; closeSheet(); renderHome(); });
+    });
   }
 
   function txRow(t) {
@@ -164,14 +178,14 @@
       var fa = Store.getAccount(t.accountId), ta = Store.getAccount(t.toAccountId);
       icon = ic('fa-solid fa-arrow-right-arrow-left');
       name = '转账';
-      sub = (fa ? fa.name : '?') + ' → ' + (ta ? ta.name : '?');
+      sub = (fa ? fa.name : '已删除账户') + ' → ' + (ta ? ta.name : '已删除账户');
       amt = '¥' + fmt(t.amount); cls = '';
     } else {
       var c = Store.getCategory(t.categoryId);
       var a = Store.getAccount(t.accountId);
       icon = ic(faOf(c, FA_TAG));
       name = c ? c.name : '其他';
-      sub = (a ? a.name : '') + (t.note ? ' · ' + t.note : '');
+      sub = (a ? a.name : '已删除账户') + (t.note ? ' · ' + t.note : '');
       amt = (t.kind === 'income' ? '+' : '-') + '¥' + fmt(t.amount);
       cls = t.kind === 'income' ? 'income' : 'expense';
     }
@@ -203,7 +217,7 @@
   function openTxEdit(id) {
     var t = Store.getTransactions().filter(function (x) { return x.id === id; })[0];
     if (!t) return;
-    edit = { id: id, kind: t.kind, categoryId: t.categoryId || null, note: t.note || '' };
+    edit = { id: id, kind: t.kind, categoryId: t.categoryId || null, note: t.note || '', date: t.date };
     renderTxEdit();
   }
 
@@ -241,8 +255,8 @@
     }
 
     var accText = isTransfer
-      ? (((Store.getAccount(t.accountId) || {}).name || '?') + ' → ' + ((Store.getAccount(t.toAccountId) || {}).name || '?'))
-      : ((Store.getAccount(t.accountId) || {}).name || '');
+      ? (((Store.getAccount(t.accountId) || {}).name || '已删除账户') + ' → ' + ((Store.getAccount(t.toAccountId) || {}).name || '已删除账户'))
+      : ((Store.getAccount(t.accountId) || {}).name || '已删除账户');
 
     openSheet(
       '<div class="card-title">编辑记录</div>' +
@@ -254,7 +268,8 @@
       '</div>' +
       kindHtml + catHtml +
       '<div class="field-label">账户</div><div class="read-val">' + esc(accText) + '</div>' +
-      '<div class="field-label">日期</div><div class="read-val">' + t.date + '</div>' +
+      '<div class="field-label">日期（可修改）</div>' +
+      '<input type="date" class="input" id="editDate" value="' + esc(edit.date || t.date) + '">' +
       '<div class="field-label">备注（可长文本，清空即删除）</div>' +
       '<textarea class="input ta" id="editNote" rows="3" placeholder="选填">' + esc(edit.note) + '</textarea>' +
       '<button class="btn btn-primary" id="editSave">保存修改</button>' +
@@ -277,10 +292,12 @@
     var sel = $('#editCat');
     if (sel) sel.addEventListener('change', function () { edit.categoryId = sel.value; });
     $('#editNote').addEventListener('input', function (e) { edit.note = e.target.value; });
+    $('#editDate').addEventListener('change', function (e) { edit.date = e.target.value || edit.date; });
 
     $('#editSave').addEventListener('click', function () {
       edit.note = $('#editNote').value;
-      var patch = { note: edit.note };
+      edit.date = $('#editDate').value || edit.date;
+      var patch = { note: edit.note, date: edit.date };
       if (!isTransfer) { patch.kind = edit.kind; patch.categoryId = edit.categoryId; }
       Store.updateTransaction(edit.id, patch);
       closeSheet(); toast('已保存修改'); rerender();
@@ -297,9 +314,69 @@
   }
 
   /* ---------- 统计 ---------- */
-  var statsState = { period: 'month', date: todayStr() };
+  /* v1.3：期间筛选 = 粒度(日/周/月/年/自定义) + 锚点日期；自定义时另存 from/to */
+  var statsState = { period: 'month', date: todayStr(), from: null, to: null };
+  /* v1.3：首页「月度汇总」卡片显示哪个月，可左右翻 */
+  var homeState = { ym: todayStr().slice(0, 7) };
 
-  function periodRange(period, dateStr) {
+  /* 按粒度前后翻一个周期（自定义不参与） */
+  function shiftPeriod(period, dateStr, delta) {
+    var d = new Date(dateStr + 'T00:00:00');
+    if (period === 'day') d.setDate(d.getDate() + delta);
+    else if (period === 'week') d.setDate(d.getDate() + 7 * delta);
+    else if (period === 'year') { d.setDate(1); d.setMonth(0); d.setFullYear(d.getFullYear() + delta); }
+    else { d.setDate(1); d.setMonth(d.getMonth() + delta); }
+    return toStr(d);
+  }
+  /* 'YYYY-MM' 按月前后翻 */
+  function shiftMonth(ym, delta) {
+    var d = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + delta, 1);
+    return d.getFullYear() + '-' + p2(d.getMonth() + 1);
+  }
+  /* 期间导航条上的标题 */
+  function periodLabel(period, rg, dateStr) {
+    var d = new Date(dateStr + 'T00:00:00');
+    if (period === 'day') return d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日';
+    if (period === 'week') return rg.from.slice(5).replace('-', '/') + ' ~ ' + rg.to.slice(5).replace('-', '/');
+    if (period === 'year') return d.getFullYear() + ' 年';
+    if (period === 'custom') return '自定义范围';
+    return d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月';
+  }
+
+  /* v1.3：月份选择器（首页汇总 / 统计页共用）。onPick 收到 'YYYY-MM' */
+  function openMonthPicker(ym, onPick) {
+    var y = +ym.slice(0, 4), m = +ym.slice(5, 7);
+    function draw() {
+      var cells = '';
+      for (var i = 1; i <= 12; i++) {
+        cells += '<button class="month-cell' + (i === m ? ' on' : '') + '" data-m="' + i + '">' + i + ' 月</button>';
+      }
+      openSheet(
+        '<div class="card-title">跳转到<span class="more">' + y + ' 年</span></div>' +
+        '<div class="period-nav">' +
+          '<button class="pn-btn" id="mpPrev">' + ic('fa-solid fa-chevron-left') + '</button>' +
+          '<span class="pn-label pn-static">' + y + ' 年</span>' +
+          '<button class="pn-btn" id="mpNext">' + ic('fa-solid fa-chevron-right') + '</button>' +
+        '</div>' +
+        '<div class="month-grid">' + cells + '</div>' +
+        '<button class="btn btn-ghost" id="mpCancel">取消</button>'
+      );
+      $('#mpPrev').addEventListener('click', function () { y--; draw(); });
+      $('#mpNext').addEventListener('click', function () { y++; draw(); });
+      $('#mpCancel').addEventListener('click', closeSheet);
+      $$('#sheetBody .month-cell').forEach(function (b) {
+        b.addEventListener('click', function () { onPick(y + '-' + p2(+b.getAttribute('data-m'))); });
+      });
+    }
+    draw();
+  }
+
+  function periodRange(period, dateStr, custom) {
+    if (period === 'custom') {
+      var f0 = (custom && custom.from) || dateStr;
+      var t0 = (custom && custom.to) || dateStr;
+      return f0 <= t0 ? { from: f0, to: t0 } : { from: t0, to: f0 };
+    }
     var d = new Date(dateStr + 'T00:00:00');
     if (period === 'day') return { from: dateStr, to: dateStr };
     if (period === 'week') {
@@ -316,7 +393,7 @@
     return { from: d.getFullYear() + '-01-01', to: d.getFullYear() + '-12-31' };
   }
 
-  function barData(period, dateStr) {
+  function barData(period, dateStr, custom) {
     var txs = Store.getTransactions();
     var buckets = [];
     var i, d;
@@ -328,7 +405,31 @@
       });
       buckets.push({ label: label, income: Math.round(inc * 100) / 100, expense: Math.round(exp * 100) / 100 });
     }
-    if (period === 'day') {
+    if (period === 'custom') {
+      var rgc = periodRange('custom', dateStr, custom);
+      var fc = new Date(rgc.from + 'T00:00:00'), tc = new Date(rgc.to + 'T00:00:00');
+      var days = Math.round((tc.getTime() - fc.getTime()) / 864e5) + 1;
+      if (days <= 62) {
+        for (i = 0; i < days; i++) {
+          d = new Date(fc.getTime() + i * 864e5);
+          push((d.getMonth() + 1) + '/' + d.getDate(), toStr(d));
+        }
+      } else {
+        /* 跨度太长就按月分桶，否则趋势图会变成几百根柱子 */
+        var cur = new Date(fc.getFullYear(), fc.getMonth(), 1);
+        while (cur.getTime() <= tc.getTime()) {
+          var ym2 = cur.getFullYear() + '-' + p2(cur.getMonth() + 1);
+          var from2 = ym2 + '-01', to2 = ym2 + '-31';
+          var inc3 = 0, exp3 = 0;
+          txs.forEach(function (t) {
+            if (t.date < from2 || t.date > to2 || t.kind === 'transfer') return;
+            if (t.kind === 'income') inc3 += t.amount; else exp3 += t.amount;
+          });
+          buckets.push({ label: (cur.getMonth() + 1) + '月', income: Math.round(inc3 * 100) / 100, expense: Math.round(exp3 * 100) / 100 });
+          cur.setMonth(cur.getMonth() + 1);
+        }
+      }
+    } else if (period === 'day') {
       var end = new Date(dateStr + 'T00:00:00');
       for (i = 6; i >= 0; i--) {
         d = new Date(end.getTime() - i * 864e5);
@@ -364,11 +465,11 @@
   }
 
   function renderStats() {
-    var periodNames = { day: '日', week: '周', month: '月', year: '年' };
-    var rg = periodRange(statsState.period, statsState.date);
+    var periodNames = { day: '日', week: '周', month: '月', year: '年', custom: '自定义' };
+    var rg = periodRange(statsState.period, statsState.date, statsState);
     var sum = Store.summary(rg.from, rg.to);
     var catData = Store.byCategory(rg.from, rg.to, 'expense');
-    var bd = barData(statsState.period, statsState.date);
+    var bd = barData(statsState.period, statsState.date, statsState);
 
     var tabs = Object.keys(periodNames).map(function (p) {
       return '<button data-p="' + p + '" class="' + (statsState.period === p ? 'on' : '') + '">' + periodNames[p] + '</button>';
@@ -379,13 +480,26 @@
         ic(faOf(c, FA_TAG)) + esc(c.name) + '<b>¥' + fmt(c.value) + '</b></div>';
     }).join('');
 
-    var dateCtl = statsState.period === 'day'
-      ? '<input type="date" class="input" id="statsDate" value="' + statsState.date + '" style="margin-bottom:14px">'
-      : '';
+    /* v1.3：期间导航条（左右翻一期 + 点标题跳月）；「自定义」时换成两个日期输入 */
+    var navHtml;
+    if (statsState.period === 'custom') {
+      navHtml = '<div class="custom-range">' +
+        '<div><div class="field-label">开始日期</div>' +
+          '<input type="date" class="input" id="stFrom" value="' + rg.from + '"></div>' +
+        '<div><div class="field-label">结束日期</div>' +
+          '<input type="date" class="input" id="stTo" value="' + rg.to + '"></div>' +
+        '</div>';
+    } else {
+      navHtml = '<div class="period-nav pn-lg">' +
+        '<button class="pn-btn" id="stPrev">' + ic('fa-solid fa-chevron-left') + '</button>' +
+        '<button class="pn-label" id="stPick">' + esc(periodLabel(statsState.period, rg, statsState.date)) + '</button>' +
+        '<button class="pn-btn" id="stNext">' + ic('fa-solid fa-chevron-right') + '</button>' +
+        '</div>';
+    }
 
     $('#page-stats').innerHTML =
       '<div class="stats-tabs">' + tabs + '</div>' +
-      dateCtl +
+      navHtml +
       '<div class="hero" style="background:linear-gradient(135deg,var(--hero-b),var(--hero-c))">' +
         '<div class="label">' + rg.from + ' ~ ' + rg.to + '</div>' +
         '<div class="hero-row" style="margin-top:10px">' +
@@ -404,15 +518,33 @@
 
     $$('#page-stats .stats-tabs button').forEach(function (b) {
       b.addEventListener('click', function () {
-        statsState.period = b.getAttribute('data-p');
+        var p = b.getAttribute('data-p');
+        statsState.period = p;
+        if (p === 'custom' && !statsState.from) {
+          var now = new Date();
+          statsState.from = toStr(new Date(now.getFullYear(), now.getMonth(), 1));
+          statsState.to = todayStr();
+        }
         renderStats();
       });
     });
-    var sd = $('#statsDate');
-    if (sd) sd.addEventListener('change', function () {
-      statsState.date = sd.value || todayStr();
-      renderStats();
+    var pv = $('#stPrev'), nx = $('#stNext'), pk = $('#stPick');
+    if (pv) pv.addEventListener('click', function () {
+      statsState.date = shiftPeriod(statsState.period, statsState.date, -1); renderStats();
     });
+    if (nx) nx.addEventListener('click', function () {
+      statsState.date = shiftPeriod(statsState.period, statsState.date, 1); renderStats();
+    });
+    if (pk) pk.addEventListener('click', function () {
+      openMonthPicker(statsState.date.slice(0, 7), function (ym) {
+        statsState.date = ym + '-01';
+        if (statsState.period === 'custom') statsState.period = 'month';
+        closeSheet(); renderStats();
+      });
+    });
+    var sf = $('#stFrom'), stt = $('#stTo');
+    if (sf) sf.addEventListener('change', function () { statsState.from = sf.value || statsState.from; renderStats(); });
+    if (stt) stt.addEventListener('change', function () { statsState.to = stt.value || statsState.to; renderStats(); });
   }
 
   /* ---------- 账户 ---------- */
@@ -481,7 +613,8 @@
       '<div class="card-title">' + iconOf(a, FA_CARD) + ' ' + esc(a.name) + '</div>' +
       '<div class="field-label">账户名称</div><input class="input" id="editAccName" value="' + esc(a.name) + '">' +
       '<div class="field-label">当前余额（校准为实际金额）</div><input class="input" id="editAccBal" type="number" step="0.01" value="' + bal + '">' +
-      '<button class="btn btn-primary" id="saveAccBtn">保存</button>'
+      '<button class="btn btn-primary" id="saveAccBtn">保存</button>' +
+      '<button class="btn btn-danger" id="delAccBtn">删除这个账户</button>'
     );
     $('#saveAccBtn').addEventListener('click', function () {
       var name = $('#editAccName').value.trim();
@@ -490,6 +623,55 @@
       if (!isNaN(nb)) Store.setAccountBalance(id, nb);
       closeSheet(); toast('已保存'); rerender();
     });
+    $('#delAccBtn').addEventListener('click', function () { deleteAccountFlow(id); });
+  }
+
+  /* v1.3：删除账户。没有记录就直接确认；有记录则让用户选「保留记录」还是「转移到别的账户」 */
+  function deleteAccountFlow(id) {
+    var a = Store.getAccount(id);
+    if (!a) return;
+    var n = Store.countAccountTx(id);
+    if (!n) {
+      openConfirm('删除账户「' + a.name + '」？', '该账户下没有记录，删除后不影响余额与统计。',
+        '确认删除', function () {
+          Store.deleteAccount(id);
+          closeSheet(); toast('账户已删除'); rerender();
+        });
+      return;
+    }
+    var others = Store.getAccounts().filter(function (x) { return x.id !== id; });
+    var opts = others.map(function (x) {
+      return '<option value="' + x.id + '">' + esc(x.name) + '</option>';
+    }).join('');
+    openSheet(
+      '<div class="card-title">删除账户「' + esc(a.name) + '」</div>' +
+      '<div class="set-note">该账户下已有 <b>' + n + '</b> 条记录，删除账户后这些记录可以：</div>' +
+      '<div class="set-note-sub">' +
+        '① <b>保留</b>：记录里的账户名显示为「已删除账户」，余额与统计不受影响；<br>' +
+        '② <b>转移</b>：把普通收支记录改挂到你选的账户上。转账记录涉及两个账户，' +
+        '搬动会凭空改变另一个账户的余额，所以它保持原样、同样显示「已删除账户」。' +
+      '</div>' +
+      '<button class="btn btn-danger" id="delKeep">删除并保留记录</button>' +
+      (others.length
+        ? '<div class="field-label">或把记录转移到</div>' +
+          '<select class="select" id="delMoveTo">' + opts + '</select>' +
+          '<button class="btn btn-primary" id="delMove">转移记录并删除账户</button>'
+        : '') +
+      '<button class="btn btn-ghost" id="delCancel">取消</button>'
+    );
+    $('#delKeep').addEventListener('click', function () {
+      Store.deleteAccount(id);
+      closeSheet(); toast('账户已删除，记录已保留'); rerender();
+    });
+    if (others.length) {
+      $('#delMove').addEventListener('click', function () {
+        var toId = $('#delMoveTo').value;
+        var toName = (Store.getAccount(toId) || {}).name || '';
+        Store.deleteAccount(id, { mode: 'move', toId: toId });
+        closeSheet(); toast('记录已转到「' + toName + '」，账户已删除'); rerender();
+      });
+    }
+    $('#delCancel').addEventListener('click', function () { openEditAccount(id); });
   }
 
   /* ---------- 设置 ---------- */
