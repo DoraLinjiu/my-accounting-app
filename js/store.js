@@ -48,7 +48,7 @@ var Store = (function () {
 
   var DEFAULT_ACCOUNTS = [
     { id: 'a-wx',   name: '微信零钱',   icon: 'fa-brands fa-weixin',          color: '#BAFFC9', balance: 0, order: 0 },
-    { id: 'a-wxt',  name: '微信零钱通', icon: 'fa-solid fa-seedling',         color: '#BAFFC9', balance: 0, order: 1 },
+    { id: 'a-wxt',  name: '微信零钱通', icon: 'fa-solid fa-coins',           color: '#BAFFC9', balance: 0, order: 1 },
     { id: 'a-zfb',  name: '支付宝零钱', icon: 'fa-brands fa-alipay',          color: '#BAE1FF', balance: 0, order: 2 },
     { id: 'a-yeb',  name: '余额宝',     icon: 'fa-solid fa-piggy-bank',       color: '#FFFFBA', balance: 0, order: 3 },
     { id: 'a-icbc', name: '工商银行',   icon: 'fa-solid fa-building-columns', color: '#FFB3BA', balance: 0, order: 4 },
@@ -63,7 +63,7 @@ var Store = (function () {
     { id: 'c-rent',   name: '房租', icon: 'fa-solid fa-house',             color: '#FFB3BA', kind: 'expense', order: 4 },
     { id: 'c-other',  name: '其他', icon: 'fa-solid fa-ellipsis',          color: '#BAE1FF', kind: 'expense', order: 5 },
     { id: 'c-salary', name: '工资', icon: 'fa-solid fa-money-bill-wave',   color: '#BAFFC9', kind: 'income', order: 6 },
-    { id: 'c-hb',     name: '红包', icon: 'fa-solid fa-envelope-open-text', color: '#FFB3BA', kind: 'income', order: 7 },
+    { id: 'c-hb',     name: '红包', icon: 'fa-solid fa-envelope',           color: '#FFB3BA', kind: 'income', order: 7 },
     { id: 'c-inv',    name: '理财', icon: 'fa-solid fa-chart-line',        color: '#BAE1FF', kind: 'income', order: 8 },
     { id: 'c-inoth',  name: '其他', icon: 'fa-solid fa-ellipsis',          color: '#FFFFBA', kind: 'income', order: 9 }
   ];
@@ -106,6 +106,17 @@ var Store = (function () {
     }
     /* v1.1：昵称字段 */
     if (!state.settings.nickname) { state.settings.nickname = 'Dora'; changed = true; }
+    /* v1.3：优化过的默认图标。只替换"还是老默认值"的那些项，
+       用户自己换过图标的不动；替换后旧值不再匹配，所以天然幂等、无需标记位。 */
+    [
+      { id: 'a-wxt', from: 'fa-solid fa-seedling',           to: 'fa-solid fa-coins' },
+      { id: 'c-hb',  from: 'fa-solid fa-envelope-open-text', to: 'fa-solid fa-envelope' }
+    ].forEach(function (r) {
+      var list = state.accounts.concat(state.categories);
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id === r.id && list[i].icon === r.from) { list[i].icon = r.to; changed = true; break; }
+      }
+    });
     if (changed) save();
   }
 
@@ -239,6 +250,12 @@ var Store = (function () {
     state.categories = state.categories.filter(function (c) { return c.id !== id; });
     save();
   }
+  /* v1.3：该分类关联了多少条记录（删除前提示用） */
+  function countCategoryTx(id) {
+    var n = 0;
+    state.transactions.forEach(function (t) { if (t.categoryId === id) n++; });
+    return n;
+  }
 
   /* ---- 交易 ---- */
   function getTransactions() {
@@ -323,6 +340,7 @@ var Store = (function () {
     deleteAccount: deleteAccount, countAccountTx: countAccountTx,
     getCategories: getCategories, getCategory: getCategory, addCategory: addCategory,
     updateCategory: updateCategory, reorderCategories: reorderCategories, deleteCategory: deleteCategory,
+    countCategoryTx: countCategoryTx,
     getTransactions: getTransactions, addTransaction: addTransaction, deleteTransaction: deleteTransaction,
     updateTransaction: updateTransaction,
     summary: summary, byCategory: byCategory,

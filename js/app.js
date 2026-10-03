@@ -36,8 +36,8 @@
     'fa-solid fa-plane', 'fa-solid fa-phone', 'fa-solid fa-wifi', 'fa-solid fa-gift',
     'fa-solid fa-heart', 'fa-solid fa-star', 'fa-solid fa-bolt', 'fa-solid fa-tag',
     'fa-solid fa-credit-card', 'fa-solid fa-wallet', 'fa-solid fa-piggy-bank', 'fa-solid fa-building-columns',
-    'fa-solid fa-money-bill-wave', 'fa-solid fa-chart-line', 'fa-solid fa-envelope-open-text', 'fa-solid fa-briefcase',
-    'fa-brands fa-weixin', 'fa-brands fa-alipay', 'fa-solid fa-seedling', 'fa-solid fa-paw'
+    'fa-solid fa-money-bill-wave', 'fa-solid fa-chart-line', 'fa-solid fa-envelope', 'fa-solid fa-briefcase',
+    'fa-brands fa-weixin', 'fa-brands fa-alipay', 'fa-solid fa-coins', 'fa-solid fa-paw'
   ];
   function iconPickHtml(selected) {
     return ICON_CHOICES.map(function (cls) {
@@ -200,7 +200,7 @@
   }
 
   /* ---------- v1.1 通用二次确认 ---------- */
-  function openConfirm(title, msg, okText, onOk) {
+  function openConfirm(title, msg, okText, onOk, onCancel) {
     openSheet(
       '<div class="card-title">' + esc(title) + '</div>' +
       '<div style="font-size:13px;color:var(--text-sub);line-height:1.9">' + msg + '</div>' +
@@ -208,7 +208,7 @@
       '<button class="btn btn-ghost" id="cfmNo">取消</button>'
     );
     $('#cfmYes').addEventListener('click', function () { onOk(); });
-    $('#cfmNo').addEventListener('click', closeSheet);
+    $('#cfmNo').addEventListener('click', onCancel || closeSheet);
   }
 
   /* ---------- v1.1 记录编辑面板 ---------- */
@@ -773,10 +773,11 @@
     var newCatIcon = ICON_CHOICES[0];
     function rows(list) {
       return list.map(function (c) {
+        /* v1.3：去掉行内的 × 删除按钮（和拖拽手柄挨太近容易误触），
+           改为点整行进入编辑弹窗，删除放在弹窗里 */
         return '<div class="cat-manage-row" data-id="' + c.id + '">' +
           '<span class="cat-bubble" style="background-color:' + (c.color || '#F1EEC6') + ';color:' + (c.color || '#F1EEC6') + ';width:36px;height:36px;border-radius:11px">' + ic(faOf(c, FA_TAG)) + '</span>' +
           '<span>' + esc(c.name) + '</span>' +
-          '<button class="tx-del" data-del="' + c.id + '">' + ic('fa-solid fa-xmark') + '</button>' +
           '<span class="drag-handle">' + ic('fa-solid fa-grip-lines') + '</span></div>';
       }).join('');
     }
@@ -796,10 +797,11 @@
     bindIconPick('#sheetBody', function (cls) { newCatIcon = cls; });
     makeSortable($('#catExp'), function (ids) { Store.reorderCategories(ids.concat(Store.getCategories('income').map(function (c) { return c.id; }))); });
     makeSortable($('#catInc'), function (ids) { Store.reorderCategories(Store.getCategories('expense').map(function (c) { return c.id; }).concat(ids)); });
-    $$('#sheetBody [data-del]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        Store.deleteCategory(b.getAttribute('data-del'));
-        renderCatManage();
+    /* v1.3：点分类行 → 编辑弹窗（改名 / 换图标 / 删除）。拖拽手柄区域交给 makeSortable */
+    $$('#sheetBody .cat-manage-row').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('.drag-handle')) return;
+        openEditCategory(row.getAttribute('data-id'));
       });
     });
     $('#addCatBtn').addEventListener('click', function () {
@@ -811,6 +813,47 @@
       toast('已添加');
     });
     $('#catDone').addEventListener('click', function () { closeSheet(); });
+  }
+
+  /* v1.3：分类编辑弹窗——改名 / 换图标 / 删除都收在这里，
+     列表行上不再放删除按钮，彻底避免和拖拽手柄误触 */
+  function openEditCategory(id) {
+    var c = Store.getCategory(id);
+    if (!c) return;
+    var picked = faOf(c, FA_TAG);
+    openSheet(
+      '<div class="card-title">编辑分类</div>' +
+      '<div class="field-label">名称</div>' +
+      '<input class="input" id="editCatName" value="' + esc(c.name) + '">' +
+      '<div class="field-label">图标（Font Awesome）</div>' +
+      '<div class="icon-pick" id="iconPick">' + iconPickHtml(picked) + '</div>' +
+      '<button class="btn btn-primary" id="saveCatBtn">保存</button>' +
+      '<button class="btn btn-danger" id="delCatBtn">删除这个分类</button>' +
+      '<button class="btn btn-ghost" id="catBack">返回分类管理</button>'
+    );
+    bindIconPick('#sheetBody', function (cls) { picked = cls; });
+    $('#saveCatBtn').addEventListener('click', function () {
+      var name = $('#editCatName').value.trim();
+      if (!name) { toast('名称不能为空'); return; }
+      Store.updateCategory(id, { name: name, icon: picked });
+      renderCatManage(); toast('已保存');
+    });
+    $('#delCatBtn').addEventListener('click', function () { confirmDeleteCategory(id); });
+    $('#catBack').addEventListener('click', function () { renderCatManage(); });
+  }
+
+  function confirmDeleteCategory(id) {
+    var c = Store.getCategory(id);
+    if (!c) return;
+    var n = Store.countCategoryTx(id);
+    openConfirm('删除分类「' + c.name + '」？',
+      n
+        ? '该分类下已有 <b>' + n + '</b> 条记录。<b>记录不会丢</b>，但它们的分类会显示为「其他」，统计里也一并归到「其他」。'
+        : '该分类下还没有记录，删除后不影响账目。',
+      '确认删除',
+      function () { Store.deleteCategory(id); renderCatManage(); toast('分类已删除'); },
+      function () { openEditCategory(id); }   /* 取消 → 回到编辑弹窗，不丢上下文 */
+    );
   }
 
   /* ---------- 记账弹层 ---------- */

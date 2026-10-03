@@ -145,14 +145,15 @@ body {
 }
 .nav-icon { font-size: 20px; }
 .nav-item.active { color: var(--accent-ink); font-weight: 700; }
-/* 「+」按钮：改用主题同款低饱和渐变 + 卡片色描边，减弱原来的粉色高饱和冲突感 */
+/* 「+」按钮：v1.3 再降一档视觉重量——缩小尺寸、减小上浮、阴影和描边都更轻，
+   让它和旁边 20px 的线性图标在视觉重量上更接近，不再是全屏最抢眼的东西 */
 .nav-add-circle {
-  width: 44px; height: 44px; border-radius: 50%; margin-top: -20px;
+  width: 38px; height: 38px; border-radius: 50%; margin-top: -15px;
   background: linear-gradient(135deg, var(--pink-soft), var(--blue-soft));
-  color: var(--accent-ink); font-size: 22px; font-weight: 700;
-  border: 2px solid var(--card);
+  color: var(--accent-ink); font-size: 19px; font-weight: 700;
+  border: 1px solid var(--card);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 10px rgba(190, 112, 128, .22);
+  box-shadow: 0 2px 6px rgba(190, 112, 128, .15);
 }
 
 /* 弹层 */
@@ -297,10 +298,10 @@ html[data-theme="dark"] .calc button.op { color: #BFE0FF; }
 .switch input:checked + .track { background: var(--accent-ink); }
 .switch input:checked + .track::after { left: 23px; }
 
-/* 分类管理行 */
+/* 分类管理行：整行可点（进入编辑弹窗），拖拽手柄区域单独响应排序 */
 .cat-manage-row {
   display: flex; align-items: center; gap: 10px; padding: 8px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line); cursor: pointer;
 }
 .cat-manage-row .drag-handle { margin-left: auto; }
 
@@ -321,23 +322,21 @@ html[data-theme="dark"] .calc button.op { color: #BFE0FF; }
 .tx-del { color: var(--text-sub); font-size: 12px; border: none; background: none; cursor: pointer; padding: 4px; }
 
 /* ===== v1.3 ===== */
-/* 顶栏昵称：白字 + 半透明深色毛玻璃胶囊，让文字"有靠山"。
-   透明度 .50 是按真实截图采样定的：顶栏右端是最浅的马卡龙绿，
-   α 取 .15（举例值）时白字只有约 1.8:1、.36 实测 3.1:1，都看不清；
-   .50 实测约 4.8:1，且仍然透出底色，是"半透明深色胶囊"。
-   另加模糊 + 极细白描边 + 文字阴影，边缘更柔、不再刺眼。
-   （想更淡一点可以调这一行的 .50，但白字会随之变糊。） */
+/* 顶栏昵称：白字 + 半透明毛玻璃胶囊。
+   底色用「暖调近黑」rgba(42,33,38,...) 而不是纯黑——纯黑压在浅马卡龙上会发灰发"脏"；
+   再叠一道顶部内高光 + 底部内暗边做玻璃质感，比一整块纯色柔和。
+   透明度 .52 是真实截图采样定的：顶栏右端是最浅的马卡龙绿，白字要有足够底色压住才清楚。 */
 .topbar-nick {
   font-size: 13px; font-weight: 600; color: #fff;
-  background: rgba(0, 0, 0, .50);
+  background: rgba(42, 33, 38, .52);
   -webkit-backdrop-filter: blur(8px) saturate(1.2);
   backdrop-filter: blur(8px) saturate(1.2);
-  border: 1px solid rgba(255, 255, 255, .30);
+  border: 1px solid rgba(255, 255, 255, .26);
   border-radius: 13px;
-  padding: 4px 12px;
+  padding: 3px 10px;
   max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, .30);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .20), inset 0 -1px 0 rgba(0, 0, 0, .12), 0 2px 6px rgba(0, 0, 0, .10);
   transition: background .2s;
 }
 
@@ -392,7 +391,7 @@ textarea.input.ta {
 .hero-pill i { color: inherit; font-size: 11px; margin-right: 4px; }
 /* 底部导航 / 账户卡 / 按钮：跟随各自文字色 */
 .nav-icon i { color: inherit; font-size: 19px; }
-.nav-add-circle i { color: inherit; font-size: 19px; }
+.nav-add-circle i { color: inherit; font-size: 17px; }
 /* 账户图标：白卡面上压深保证可读；深色主题下保留明亮马卡龙色 */
 .acc-icon i { color: inherit; font-size: 21px; filter: brightness(.58) saturate(.92); }
 html[data-theme="dark"] .acc-icon i { filter: none; }
@@ -425,8 +424,9 @@ html[data-theme="dark"] .icon-pick-btn i { color: rgba(255, 255, 255, .6); }
 html[data-theme="dark"] .icon-pick-btn.on i { color: var(--accent-ink); }
 
 /* ===== v1.3：期间导航条 / 自定义范围 / 月份选择器 ===== */
-/* 一条 ‹ 标题 › 的期间导航：左右各翻一个周期，点中间标题跳月 */
-.period-nav { display: flex; align-items: center; gap: 6px; }
+/* 一条 ‹ 标题 › 的期间导航：左右各翻一个周期，点中间标题跳月。
+   gap 留足 10px，箭头和文字之间才有呼吸感 */
+.period-nav { display: flex; align-items: center; gap: 10px; }
 .period-nav.pn-lg { margin-bottom: 16px; }
 .pn-btn {
   width: 30px; height: 30px; flex: 0 0 auto;
@@ -448,7 +448,7 @@ html[data-theme="dark"] .icon-pick-btn.on i { color: var(--accent-ink); }
 .period-nav.pn-lg .pn-btn { width: 32px; height: 32px; }
 
 /* 卡片标题右侧的小号版本（首页汇总卡片） */
-.period-nav.pn-sm { gap: 2px; flex: 0 0 auto; }
+.period-nav.pn-sm { gap: 6px; flex: 0 0 auto; }
 .period-nav.pn-sm .pn-btn { width: 24px; height: 24px; border-radius: 8px; }
 .period-nav.pn-sm .pn-btn i { font-size: 10px; }
 .period-nav.pn-sm .pn-label {
