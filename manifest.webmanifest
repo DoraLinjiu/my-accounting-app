@@ -2,7 +2,7 @@
   "id": "./",
   "name": "记账本",
   "short_name": "记账本",
-  "version": "1.5.0",
+  "version": "1.5.2",
   "description": "记账本：多账户记账 App，支持记录编辑、AA 分账、桶装水拼单、收支统计，离线可用。",
   "start_url": "./",
   "scope": "./",

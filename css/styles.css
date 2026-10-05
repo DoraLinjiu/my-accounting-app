@@ -622,7 +622,6 @@ html[data-theme="dark"] .topbar-nick { color:#F6EDEF; background:rgba(255,255,25
 .hero-pill { background:rgba(255,255,255,.48); }
 #bottomnav { background:rgba(255,255,255,.84); -webkit-backdrop-filter:blur(22px) saturate(1.15); backdrop-filter:blur(22px) saturate(1.15); }
 html[data-theme="dark"] #bottomnav { background:rgba(35,33,39,.88); }
-.recent-card .tx-item:nth-of-type(n+10) { display:none; }
 .all-bills-link { border:0; background:rgba(190,69,91,.08); color:var(--accent-ink); border-radius:999px; padding:7px 10px; font:600 12px/1 inherit; cursor:pointer; }
 .all-bills-link i { color:inherit; font-size:10px; margin-left:3px; }
 
