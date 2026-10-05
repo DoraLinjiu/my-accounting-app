@@ -1,351 +1,134 @@
-/* ===== 数据层：localStorage 持久化 ===== */
+/* ===== 数据层：localStorage 持久化（v1.4） ===== */
 var Store = (function () {
+  'use strict';
   var KEY = 'macaron-ledger-v1';
-  var VERSION = '1.3';
-
-  /* 图标一律用 Font Awesome 6 类名（fa-solid/fa-brands + fa-xxx） */
-  var ICON_TAG = 'fa-solid fa-tag';
-  var ICON_CARD = 'fa-solid fa-credit-card';
-
-  /* 旧存档里的 emoji → Font Awesome 映射（load 时自动迁移，幂等） */
+  var VERSION = '1.5.0';
+  var SCHEMA_VERSION = 2;
+  var RECOVERY_PREFIX = KEY + '-recovery-';
+  var ICON_TAG = 'fa-solid fa-tag', ICON_CARD = 'fa-solid fa-credit-card';
+  var ALLOWED_ICONS = [
+    'fa-solid fa-utensils','fa-solid fa-cart-shopping','fa-solid fa-car','fa-solid fa-gamepad','fa-solid fa-house',
+    'fa-solid fa-droplet','fa-solid fa-mug-hot','fa-solid fa-bus','fa-solid fa-shirt','fa-solid fa-film','fa-solid fa-book',
+    'fa-solid fa-dumbbell','fa-solid fa-plane','fa-solid fa-phone','fa-solid fa-wifi','fa-solid fa-gift','fa-solid fa-heart',
+    'fa-solid fa-star','fa-solid fa-bolt','fa-solid fa-tag','fa-solid fa-credit-card','fa-solid fa-wallet','fa-solid fa-piggy-bank',
+    'fa-solid fa-building-columns','fa-solid fa-landmark','fa-solid fa-money-bill-wave','fa-solid fa-chart-line','fa-solid fa-envelope',
+    'fa-solid fa-briefcase','fa-brands fa-weixin','fa-brands fa-alipay','fa-solid fa-coins','fa-solid fa-paw','fa-solid fa-ellipsis'
+  ];
   var EMOJI_ICON_MAP = {
-    '💚': 'fa-brands fa-weixin',
-    '💵': 'fa-solid fa-seedling',
-    '💙': 'fa-brands fa-alipay',
-    '💛': 'fa-solid fa-piggy-bank',
-    '🏦': 'fa-solid fa-building-columns',
-    '💳': 'fa-solid fa-credit-card',
-    '🍜': 'fa-solid fa-utensils',
-    '🚌': 'fa-solid fa-car',
-    '🛍': 'fa-solid fa-cart-shopping',
-    '🎮': 'fa-solid fa-gamepad',
-    '🏠': 'fa-solid fa-house',
-    '📦': 'fa-solid fa-ellipsis',
-    '💰': 'fa-solid fa-money-bill-wave',
-    '🧧': 'fa-solid fa-envelope-open-text',
-    '📈': 'fa-solid fa-chart-line',
-    '📥': 'fa-solid fa-ellipsis',
-    '💧': 'fa-solid fa-droplet',
-    '🏷': 'fa-solid fa-tag',
-    '🐾': 'fa-solid fa-paw',
-    '🧋': 'fa-solid fa-mug-hot',
-    '☕': 'fa-solid fa-mug-hot',
-    '🍎': 'fa-solid fa-apple-whole',
-    '🏃': 'fa-solid fa-person-running',
-    '📱': 'fa-solid fa-mobile-screen',
-    '✈': 'fa-solid fa-plane',
-    '🎁': 'fa-solid fa-gift',
-    '⭐': 'fa-solid fa-star',
-    '❤': 'fa-solid fa-heart'
+    '💚':'fa-brands fa-weixin','💵':'fa-solid fa-coins','💙':'fa-brands fa-alipay','💛':'fa-solid fa-piggy-bank',
+    '🏦':'fa-solid fa-building-columns','💳':ICON_CARD,'🍜':'fa-solid fa-utensils','🚌':'fa-solid fa-car',
+    '🛓':'fa-solid fa-cart-shopping','🎮':'fa-solid fa-gamepad','🏠':'fa-solid fa-house','💧':'fa-solid fa-droplet',
+    '💰':'fa-solid fa-money-bill-wave','🧧':'custom-red-packet','📈':'fa-solid fa-chart-line','🏷':ICON_TAG,
+    '🐾':'fa-solid fa-paw','☕':'fa-solid fa-mug-hot','❤':'fa-solid fa-heart'
   };
-  /* 任意图标值（emoji 或 fa- 类名）统一成 Font Awesome 类名 */
-  function faIcon(raw, fallback) {
-    var v = raw == null ? '' : String(raw).trim();
-    if (v.indexOf('fa-') === 0) return v;
-    var key = v.replace(/[\uFE0E\uFE0F]/g, '');
-    return EMOJI_ICON_MAP[key] || EMOJI_ICON_MAP[v] || fallback || ICON_TAG;
-  }
-
   var DEFAULT_ACCOUNTS = [
-    { id: 'a-wx',   name: '微信零钱',   icon: 'fa-brands fa-weixin',          color: '#BAFFC9', balance: 0, order: 0 },
-    { id: 'a-wxt',  name: '微信零钱通', icon: 'fa-solid fa-coins',           color: '#BAFFC9', balance: 0, order: 1 },
-    { id: 'a-zfb',  name: '支付宝零钱', icon: 'fa-brands fa-alipay',          color: '#BAE1FF', balance: 0, order: 2 },
-    { id: 'a-yeb',  name: '余额宝',     icon: 'fa-solid fa-piggy-bank',       color: '#FFFFBA', balance: 0, order: 3 },
-    { id: 'a-icbc', name: '工商银行',   icon: 'fa-solid fa-building-columns', color: '#FFB3BA', balance: 0, order: 4 },
-    { id: 'a-ccb',  name: '建设银行',   icon: 'fa-solid fa-landmark',         color: '#BAE1FF', balance: 0, order: 5 }
+    {id:'a-wx',name:'微信零钱',icon:'fa-brands fa-weixin',color:'#BAFFC9',balance:0,order:0,archived:false},
+    {id:'a-wxt',name:'微信零钱通',icon:'fa-solid fa-coins',color:'#BAFFC9',balance:0,order:1,archived:false},
+    {id:'a-zfb',name:'支付宝零钱',icon:'fa-brands fa-alipay',color:'#BAE1FF',balance:0,order:2,archived:false},
+    {id:'a-yeb',name:'余额宝',icon:'fa-solid fa-piggy-bank',color:'#FFFFBA',balance:0,order:3,archived:false},
+    {id:'a-icbc',name:'工商银行',icon:'fa-solid fa-building-columns',color:'#FFB3BA',balance:0,order:4,archived:false},
+    {id:'a-ccb',name:'建设银行',icon:'fa-solid fa-landmark',color:'#BAE1FF',balance:0,order:5,archived:false}
   ];
-
   var DEFAULT_CATEGORIES = [
-    { id: 'c-food',   name: '餐饮', icon: 'fa-solid fa-utensils',          color: '#FFB3BA', kind: 'expense', order: 0 },
-    { id: 'c-trans',  name: '交通', icon: 'fa-solid fa-car',               color: '#BAE1FF', kind: 'expense', order: 1 },
-    { id: 'c-shop',   name: '购物', icon: 'fa-solid fa-cart-shopping',     color: '#BAFFC9', kind: 'expense', order: 2 },
-    { id: 'c-fun',    name: '娱乐', icon: 'fa-solid fa-gamepad',           color: '#FFFFBA', kind: 'expense', order: 3 },
-    { id: 'c-rent',   name: '房租', icon: 'fa-solid fa-house',             color: '#FFB3BA', kind: 'expense', order: 4 },
-    { id: 'c-other',  name: '其他', icon: 'fa-solid fa-ellipsis',          color: '#BAE1FF', kind: 'expense', order: 5 },
-    { id: 'c-salary', name: '工资', icon: 'fa-solid fa-money-bill-wave',   color: '#BAFFC9', kind: 'income', order: 6 },
-    { id: 'c-hb',     name: '红包', icon: 'fa-solid fa-envelope',           color: '#FFB3BA', kind: 'income', order: 7 },
-    { id: 'c-inv',    name: '理财', icon: 'fa-solid fa-chart-line',        color: '#BAE1FF', kind: 'income', order: 8 },
-    { id: 'c-inoth',  name: '其他', icon: 'fa-solid fa-ellipsis',          color: '#FFFFBA', kind: 'income', order: 9 }
+    {id:'c-food',name:'餐饮',icon:'fa-solid fa-utensils',color:'#FFB3BA',kind:'expense',order:0},
+    {id:'c-water',name:'桶装水',icon:'fa-solid fa-droplet',color:'#BAE1FF',kind:'expense',order:1},
+    {id:'c-trans',name:'交通',icon:'fa-solid fa-car',color:'#BAE1FF',kind:'expense',order:2},
+    {id:'c-shop',name:'购物',icon:'fa-solid fa-cart-shopping',color:'#BAFFC9',kind:'expense',order:3},
+    {id:'c-fun',name:'娱乐',icon:'fa-solid fa-gamepad',color:'#FFFFBA',kind:'expense',order:4},
+    {id:'c-rent',name:'房租',icon:'fa-solid fa-house',color:'#FFB3BA',kind:'expense',order:5},
+    {id:'c-other',name:'其他',icon:'fa-solid fa-ellipsis',color:'#BAE1FF',kind:'expense',order:6},
+    {id:'c-salary',name:'工资',icon:'fa-solid fa-money-bill-wave',color:'#BAFFC9',kind:'income',order:7},
+    {id:'c-hb',name:'红包',icon:'custom-red-packet',color:'#E75B62',kind:'income',order:8},
+    {id:'c-inv',name:'理财',icon:'fa-solid fa-chart-line',color:'#BAE1FF',kind:'income',order:9},
+    {id:'c-inoth',name:'其他',icon:'fa-solid fa-ellipsis',color:'#FFFFBA',kind:'income',order:10}
   ];
+  var state = blank(), loadError = null;
+  function clone(v){return JSON.parse(JSON.stringify(v));}
+  function blank(){return {schemaVersion:SCHEMA_VERSION,accounts:clone(DEFAULT_ACCOUNTS),categories:clone(DEFAULT_CATEGORIES),transactions:[],settings:{dark:false,nickname:'Dora'}};}
+  function r2(n){return Math.round(Number(n)*100)/100;}
+  function finiteNumber(v){return typeof v==='number'&&Number.isFinite(v);}
+  function validId(v){return typeof v==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(v);}
+  function validColor(v){return typeof v==='string'&&/^#[0-9A-Fa-f]{6}$/.test(v);}
+  function p2(n){return(n<10?'0':'')+n;}
+  function localDate(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+  function validDate(v){if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;var d=new Date(v+'T00:00:00');return!isNaN(d.getTime())&&localDate(d)===v;}
+  function safeText(v,max,fallback){var s=typeof v==='string'?v.trim():'';return(s||fallback||'').slice(0,max||2000);}
+  function faIcon(raw,fallback){var v=raw==null?'':String(raw).trim();if(v==='custom-red-packet')return v;var key=v.replace(/[\uFE0E\uFE0F]/g,'');return EMOJI_ICON_MAP[key]||(ALLOWED_ICONS.indexOf(v)>=0?v:(fallback||ICON_TAG));}
+  function allowedIcon(raw){var v=raw==null?'':String(raw).trim();return v==='custom-red-packet'||ALLOWED_ICONS.indexOf(v)>=0||!!EMOJI_ICON_MAP[v.replace(/[\uFE0E\uFE0F]/g,'')];}
+  function uid(prefix){return prefix+'-'+Date.now().toString(36)+'-'+Math.floor(Math.random()*1e9).toString(36);}
+  function save(){localStorage.setItem(KEY,JSON.stringify(state));return true;}
+  function mutate(fn){if(loadError)throw new Error('请先到设置页处理存档错误');var before=clone(state);try{var result=fn();save();return result;}catch(e){state=before;throw e;}}
+  function saveRecovery(raw,reason){var key=RECOVERY_PREFIX+Date.now();try{localStorage.setItem(key,raw);}catch(ignore){}loadError={message:reason,recoveryKey:key,raw:raw};}
 
-  function blank() {
-    return {
-      accounts: DEFAULT_ACCOUNTS.map(function (a) { return Object.assign({}, a); }),
-      categories: DEFAULT_CATEGORIES.map(function (c) { return Object.assign({}, c); }),
-      transactions: [],
-      settings: { dark: false, nickname: 'Dora' }
-    };
+  function migrate(d){
+    if(!d.settings||typeof d.settings!=='object'||Array.isArray(d.settings))d.settings={dark:false,nickname:'Dora'};
+    d.settings.dark=!!d.settings.dark;d.settings.nickname=safeText(d.settings.nickname,20,'Dora');
+    d.accounts.forEach(function(a,i){a.archived=!!a.archived;a.icon=faIcon(a.icon,ICON_CARD);a.color=validColor(a.color)?a.color:'#BAE1FF';a.order=finiteNumber(a.order)?a.order:i;});
+    ['c-water','c-other','c-inoth'].forEach(function(id){if(!d.categories.some(function(c){return c.id===id;}))d.categories.push(clone(DEFAULT_CATEGORIES.filter(function(c){return c.id===id;})[0]));});
+    d.categories.forEach(function(c,i){c.icon=c.id==='c-hb'&&(c.icon==='fa-solid fa-envelope'||c.icon==='fa-solid fa-envelope-open-text')?'custom-red-packet':faIcon(c.icon,ICON_TAG);c.color=validColor(c.color)?c.color:'#BAE1FF';c.order=finiteNumber(c.order)?c.order:i;});
+    var accountIds={};d.accounts.forEach(function(a){accountIds[a.id]=true;});
+    d.transactions.forEach(function(t){[t.accountId,t.toAccountId].forEach(function(id){if(id&&!accountIds[id]){d.accounts.push({id:id,name:'旧版已删除账户',icon:ICON_CARD,color:'#B8B8C2',balance:0,order:d.accounts.length,archived:true,legacyPlaceholder:true});accountIds[id]=true;}});});
+    var categoryIds={};d.categories.forEach(function(c){categoryIds[c.id]=true;});
+    d.transactions.forEach(function(t){if(t.kind!=='transfer'&&!categoryIds[t.categoryId])t.categoryId=t.kind==='income'?'c-inoth':'c-other';});
+    d.schemaVersion=SCHEMA_VERSION;return d;
   }
+  function validateData(input,allowLegacy){
+    if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('根数据必须是 JSON 对象');
+    if(!Array.isArray(input.accounts))throw new Error('accounts 必须是数组');
+    if(!Array.isArray(input.categories))throw new Error('categories 必须是数组');
+    if(!Array.isArray(input.transactions))throw new Error('transactions 必须是数组');
+    if(input.settings!=null&&(typeof input.settings!=='object'||Array.isArray(input.settings)))throw new Error('settings 必须是对象');
+    var d=clone(input),ids={};
+    d.accounts.forEach(function(a,i){if(!a||typeof a!=='object')throw new Error('账户 #'+(i+1)+' 格式错误');if(!validId(a.id)||ids[a.id])throw new Error('账户 ID 无效或重复：'+String(a.id));ids[a.id]=true;if(!finiteNumber(a.balance))throw new Error('账户余额必须是有限数字：'+a.id);if(!allowLegacy&&!allowedIcon(a.icon))throw new Error('账户图标不在允许列表：'+a.id);if(!allowLegacy&&!validColor(a.color))throw new Error('账户颜色无效：'+a.id);a.balance=r2(a.balance);a.name=safeText(a.name,60,'未命名账户');a.icon=faIcon(a.icon,ICON_CARD);a.color=validColor(a.color)?a.color:'#BAE1FF';});
+    var catIds={};
+    d.categories.forEach(function(c,i){if(!c||typeof c!=='object')throw new Error('分类 #'+(i+1)+' 格式错误');if(!validId(c.id)||catIds[c.id])throw new Error('分类 ID 无效或重复：'+String(c.id));if(c.kind!=='expense'&&c.kind!=='income')throw new Error('分类类型无效：'+c.id);if(!allowLegacy&&!allowedIcon(c.icon))throw new Error('分类图标不在允许列表：'+c.id);if(!allowLegacy&&!validColor(c.color))throw new Error('分类颜色无效：'+c.id);catIds[c.id]=true;c.name=safeText(c.name,60,'未命名分类');c.icon=faIcon(c.icon,ICON_TAG);c.color=validColor(c.color)?c.color:'#BAE1FF';});
+    var txIds={};
+    d.transactions.forEach(function(t,i){if(!t||typeof t!=='object')throw new Error('流水 #'+(i+1)+' 格式错误');if(!validId(t.id)||txIds[t.id])throw new Error('流水 ID 无效或重复：'+String(t.id));txIds[t.id]=true;if(['expense','income','transfer'].indexOf(t.kind)<0)throw new Error('流水类型无效：'+t.id);if(!finiteNumber(t.amount)||t.amount<=0)throw new Error('流水金额必须是大于 0 的有限数字：'+t.id);if(!validDate(t.date))throw new Error('流水日期无效：'+t.id);if(!allowLegacy&&!ids[t.accountId])throw new Error('流水引用了不存在的账户：'+t.id);if(t.kind==='transfer'){if(!allowLegacy&&!ids[t.toAccountId])throw new Error('转账引用了不存在的转入账户：'+t.id);if(t.accountId===t.toAccountId)throw new Error('转账的转出和转入账户不能相同：'+t.id);}else if(!allowLegacy&&!catIds[t.categoryId])throw new Error('流水引用了不存在的分类：'+t.id);t.amount=r2(t.amount);t.note=safeText(t.note,5000,'');t.ts=finiteNumber(t.ts)?t.ts:Date.now()+i;});
+    return migrate(d);
+  }
+  function load(){var raw=null;try{raw=localStorage.getItem(KEY);}catch(e){loadError={message:'无法读取本地存储：'+e.message,raw:''};return state;}if(!raw){state=blank();try{save();}catch(e2){loadError={message:'无法初始化本地存储：'+e2.message,raw:''};}return state;}try{state=validateData(JSON.parse(raw),true);try{save();}catch(writeError){loadError={message:'存档已读取，但无法写入迁移结果：'+writeError.message,raw:raw};}}catch(e3){saveRecovery(raw,'存档损坏或结构无效：'+e3.message);state=blank();}return state;}
 
-  var state = blank();
-
-  /* v1.1：把存档里的 emoji 图标统一迁移成 Font Awesome 图标（幂等） */
-  function normalizeIcons() {
-    var changed = false;
-    state.accounts.forEach(function (a) {
-      var v = faIcon(a.icon, ICON_CARD);
-      if (v !== a.icon) { a.icon = v; changed = true; }
-    });
-    state.categories.forEach(function (c) {
-      var v = faIcon(c.icon, ICON_TAG);
-      if (v !== c.icon) { c.icon = v; changed = true; }
-    });
-    return changed;
+  function getAccounts(options){var include=!options||options.includeArchived!==false;return state.accounts.filter(function(a){return include||!a.archived;}).slice().sort(function(a,b){return a.order-b.order;});}
+  function getActiveAccounts(){return getAccounts({includeArchived:false});}
+  function getAccount(id){return state.accounts.filter(function(a){return a.id===id;})[0]||null;}
+  function accountBalance(id){var a=getAccount(id);if(!a)return 0;var cents=Math.round(a.balance*100);state.transactions.forEach(function(t){var amount=Math.round(t.amount*100);if(t.kind==='transfer'){if(t.accountId===id)cents-=amount;if(t.toAccountId===id)cents+=amount;}else if(t.accountId===id)cents+=t.kind==='income'?amount:-amount;});return cents/100;}
+  function totalAssets(){return getAccounts().reduce(function(s,a){return s+Math.round(accountBalance(a.id)*100);},0)/100;}
+  function updateAccount(id,patch){return mutate(function(){var a=getAccount(id);if(!a)throw new Error('账户不存在');if(patch.name!=null)a.name=safeText(patch.name,60);return a;});}
+  function addAccount(name,icon,color,initialBalance){return mutate(function(){var bal=initialBalance==null?0:initialBalance;if(!finiteNumber(bal))throw new Error('初始余额必须是有限数字');var a={id:uid('a'),name:safeText(name,60),icon:faIcon(icon,ICON_CARD),color:validColor(color)?color:'#BAE1FF',balance:r2(bal),order:state.accounts.length,archived:false};state.accounts.push(a);return a;});}
+  function setAccountBalance(id,target){return mutate(function(){if(!finiteNumber(target))throw new Error('余额必须是有限数字');var a=getAccount(id);if(!a)throw new Error('账户不存在');a.balance=r2(a.balance+target-accountBalance(id));return a;});}
+  function saveAccount(id,name,target){return mutate(function(){if(!finiteNumber(target))throw new Error('余额必须是有限数字');var a=getAccount(id);if(!a)throw new Error('账户不存在');var current=accountBalance(id);a.name=safeText(name,60,a.name);a.balance=r2(a.balance+target-current);return a;});}
+  function reorderAccounts(ids){return mutate(function(){ids.forEach(function(id,i){var a=getAccount(id);if(a&&!a.archived)a.order=i;});});}
+  function countAccountTx(id){return state.transactions.filter(function(t){return t.accountId===id||t.toAccountId===id;}).length;}
+  function archiveAccount(id){return mutate(function(){var a=getAccount(id);if(!a)throw new Error('账户不存在');if(!countAccountTx(id))throw new Error('无流水账户请直接删除');a.archived=true;return a;});}
+  function restoreAccount(id){return mutate(function(){var a=getAccount(id);if(!a)throw new Error('账户不存在');var nextOrder=getActiveAccounts().length;a.archived=false;a.order=nextOrder;return a;});}
+  function deleteAccount(id){return mutate(function(){if(countAccountTx(id))throw new Error('该账户有历史流水，只能归档');state.accounts=state.accounts.filter(function(a){return a.id!==id;});});}
+  function getCategories(kind){return state.categories.filter(function(c){return!kind||c.kind===kind;}).slice().sort(function(a,b){return a.order-b.order;});}
+  function getCategory(id){return state.categories.filter(function(c){return c.id===id;})[0]||null;}
+  function addCategory(name,icon,color,kind){return mutate(function(){if(kind!=='expense'&&kind!=='income')throw new Error('分类类型无效');var c={id:uid('c'),name:safeText(name,60),icon:faIcon(icon,ICON_TAG),color:validColor(color)?color:'#FFFFBA',kind:kind,order:state.categories.length};state.categories.push(c);return c;});}
+  function updateCategory(id,patch){return mutate(function(){var c=getCategory(id);if(!c)throw new Error('分类不存在');if(patch.name!=null)c.name=safeText(patch.name,60);if(patch.icon!=null)c.icon=faIcon(patch.icon,ICON_TAG);return c;});}
+  function reorderCategories(ids){return mutate(function(){ids.forEach(function(id,i){var c=getCategory(id);if(c)c.order=i;});});}
+  function countCategoryTx(id){return state.transactions.filter(function(t){return t.categoryId===id;}).length;}
+  function deleteCategory(id){return mutate(function(){var c=getCategory(id);if(!c)throw new Error('分类不存在');if(id==='c-other'||id==='c-inoth')throw new Error('默认“其他”分类不能删除');var fallback=c.kind==='income'?'c-inoth':'c-other';state.transactions.forEach(function(t){if(t.categoryId===id)t.categoryId=fallback;});state.categories=state.categories.filter(function(x){return x.id!==id;});});}
+  function getTransactions(){return state.transactions.slice().sort(function(a,b){if(a.date!==b.date)return a.date<b.date?1:-1;return b.ts-a.ts;});}
+  function validateTransaction(t){if(['expense','income','transfer'].indexOf(t.kind)<0)throw new Error('流水类型无效');if(!finiteNumber(t.amount)||t.amount<=0)throw new Error('金额必须大于 0');if(!validDate(t.date))throw new Error('日期无效');if(!getAccount(t.accountId))throw new Error('账户不存在');if(t.kind==='transfer'){if(!getAccount(t.toAccountId))throw new Error('转入账户不存在');if(t.accountId===t.toAccountId)throw new Error('转出和转入账户不能相同');}else{var c=getCategory(t.categoryId);if(!c||c.kind!==t.kind)throw new Error('分类不存在或与收支类型不匹配');}t.amount=r2(t.amount);t.note=safeText(t.note,5000,'');return t;}
+  function addTransaction(t){return mutate(function(){var x=validateTransaction(Object.assign({},t));x.id=uid('t');x.ts=Date.now();state.transactions.push(x);return x;});}
+  function deleteTransaction(id){return mutate(function(){state.transactions=state.transactions.filter(function(t){return t.id!==id;});});}
+  function updateTransaction(id,patch){return mutate(function(){var t=state.transactions.filter(function(x){return x.id===id;})[0];if(!t)throw new Error('流水不存在');var next=validateTransaction(Object.assign({},t,patch));Object.assign(t,next);return t;});}
+  function summary(from,to){var inc=0,exp=0;state.transactions.forEach(function(t){if(t.date<from||t.date>to||t.kind==='transfer')return;if(t.kind==='income')inc+=Math.round(t.amount*100);else exp+=Math.round(t.amount*100);});return{income:inc/100,expense:exp/100};}
+  function byCategory(from,to,kind){var map={};state.transactions.forEach(function(t){if(t.date>=from&&t.date<=to&&t.kind===kind)map[t.categoryId]=(map[t.categoryId]||0)+Math.round(t.amount*100);});return Object.keys(map).map(function(id){var c=getCategory(id);return{id:id,name:c?c.name:'其他',icon:c?c.icon:ICON_TAG,color:c?c.color:'#CCCCCC',value:map[id]/100};}).sort(function(a,b){return b.value-a.value;});}
+  function monthlySummaries(from,to){
+    if(!validDate(from)||!validDate(to))throw new Error('日期范围无效');if(from>to){var swap=from;from=to;to=swap;}
+    var first=new Date(from+'T00:00:00'),cur=new Date(first.getFullYear(),first.getMonth(),1),out=[];
+    while(localDate(cur)<=to){var ym=cur.getFullYear()+'-'+p2(cur.getMonth()+1),monthStart=ym+'-01',monthEnd=localDate(new Date(cur.getFullYear(),cur.getMonth()+1,0));var clippedFrom=monthStart<from?from:monthStart,clippedTo=monthEnd>to?to:monthEnd;var s=summary(clippedFrom,clippedTo);out.push({label:(cur.getMonth()+1)+'月',from:clippedFrom,to:clippedTo,income:s.income,expense:s.expense});cur.setMonth(cur.getMonth()+1);}return out;
   }
-
-  /* 数据迁移：给旧存档补充后加的字段 */
-  function migrate() {
-    var changed = normalizeIcons();
-    if (!state.categories.some(function (c) { return c.id === 'c-water'; })) {
-      var idx = -1;
-      state.categories.forEach(function (c, i) { if (c.id === 'c-food') idx = i; });
-      state.categories.splice(idx >= 0 ? idx + 1 : 1, 0,
-        { id: 'c-water', name: '桶装水', icon: 'fa-solid fa-droplet', color: '#BAE1FF', kind: 'expense', order: 0 });
-      state.categories.forEach(function (c, i) { c.order = i; });
-      changed = true;
-    }
-    /* v1.1：昵称字段 */
-    if (!state.settings.nickname) { state.settings.nickname = 'Dora'; changed = true; }
-    /* v1.3：优化过的默认图标。只替换"还是老默认值"的那些项，
-       用户自己换过图标的不动；替换后旧值不再匹配，所以天然幂等、无需标记位。 */
-    [
-      { id: 'a-wxt', from: 'fa-solid fa-seedling',           to: 'fa-solid fa-coins' },
-      { id: 'c-hb',  from: 'fa-solid fa-envelope-open-text', to: 'fa-solid fa-envelope' }
-    ].forEach(function (r) {
-      var list = state.accounts.concat(state.categories);
-      for (var i = 0; i < list.length; i++) {
-        if (list[i].id === r.id && list[i].icon === r.from) { list[i].icon = r.to; changed = true; break; }
-      }
-    });
-    if (changed) save();
-  }
-
-  function load() {
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (raw) {
-        var data = JSON.parse(raw);
-        if (data && data.accounts && data.categories && data.transactions) {
-          state = data;
-          if (!state.settings) state.settings = { dark: false };
-        }
-      }
-    } catch (e) { /* 数据损坏则用默认 */ }
-    migrate();
-    return state;
-  }
-
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
-  }
-
-  function uid(prefix) {
-    return prefix + '-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e6).toString(36);
-  }
-
-  /* ---- 账户 ---- */
-  function getAccounts() {
-    return state.accounts.slice().sort(function (a, b) { return a.order - b.order; });
-  }
-  function getAccount(id) {
-    for (var i = 0; i < state.accounts.length; i++) if (state.accounts[i].id === id) return state.accounts[i];
-    return null;
-  }
-  /* 当前余额 = 初始余额 + 收入 - 支出 - 转出 + 转入 */
-  function accountBalance(id) {
-    var acc = getAccount(id);
-    if (!acc) return 0;
-    var bal = acc.balance;
-    state.transactions.forEach(function (t) {
-      if (t.kind === 'transfer') {
-        if (t.accountId === id) bal -= t.amount;
-        if (t.toAccountId === id) bal += t.amount;
-      } else if (t.accountId === id) {
-        bal += (t.kind === 'income') ? t.amount : -t.amount;
-      }
-    });
-    return Math.round(bal * 100) / 100;
-  }
-  function totalAssets() {
-    return getAccounts().reduce(function (s, a) { return s + accountBalance(a.id); }, 0);
-  }
-  function updateAccount(id, patch) {
-    var acc = getAccount(id);
-    if (acc) { Object.assign(acc, patch); save(); }
-  }
-  function addAccount(name, icon, color) {
-    var maxOrder = state.accounts.reduce(function (m, a) { return Math.max(m, a.order); }, -1);
-    var acc = { id: uid('a'), name: name, icon: faIcon(icon, ICON_CARD), color: color || '#BAE1FF', balance: 0, order: maxOrder + 1 };
-    state.accounts.push(acc); save(); return acc;
-  }
-  /* 把当前余额校准为 target（通过调整初始余额） */
-  function setAccountBalance(id, target) {
-    var acc = getAccount(id);
-    if (!acc) return;
-    var cur = accountBalance(id);
-    acc.balance = Math.round((acc.balance + (target - cur)) * 100) / 100;
-    save();
-  }
-  function reorderAccounts(ids) {
-    ids.forEach(function (id, idx) {
-      var acc = getAccount(id);
-      if (acc) acc.order = idx;
-    });
-    save();
-  }
-  /* v1.3：该账户关联了多少条记录（含转入/转出） */
-  function countAccountTx(id) {
-    var n = 0;
-    state.transactions.forEach(function (t) {
-      if (t.accountId === id || t.toAccountId === id) n++;
-    });
-    return n;
-  }
-  /* v1.3：删除账户。
-     opts.mode = 'move' 时把该账户上的**普通收支记录**改挂到 opts.toId，删完重排 order。
-     为什么不搬转账：转账两侧各属一个账户，把被删账户那一侧改挂到目标账户后，
-     目标账户会因为"转出"凭空少一笔钱，极端情况下两侧还都变成同一个账户。
-     所以涉及该账户的转账保持原样，页面显示为「已删除账户」，余额影响不变。*/
-  function deleteAccount(id, opts) {
-    opts = opts || {};
-    var toId = opts.mode === 'move' ? opts.toId : null;
-    if (toId && toId !== id && getAccount(toId)) {
-      state.transactions.forEach(function (t) {
-        if (t.kind === 'transfer') return;   /* 转账不搬，理由见上 */
-        if (t.accountId === id) t.accountId = toId;
-      });
-    }
-    state.accounts = state.accounts.filter(function (a) { return a.id !== id; });
-    state.accounts.forEach(function (a, i) { a.order = i; });
-    save();
-  }
-
-  /* ---- 分类 ---- */
-  function getCategories(kind) {
-    return state.categories
-      .filter(function (c) { return !kind || c.kind === kind; })
-      .sort(function (a, b) { return a.order - b.order; });
-  }
-  function getCategory(id) {
-    for (var i = 0; i < state.categories.length; i++) if (state.categories[i].id === id) return state.categories[i];
-    return null;
-  }
-  function addCategory(name, icon, color, kind) {
-    var maxOrder = state.categories.reduce(function (m, c) { return Math.max(m, c.order); }, -1);
-    var cat = { id: uid('c'), name: name, icon: faIcon(icon, ICON_TAG), color: color || '#FFFFBA', kind: kind, order: maxOrder + 1 };
-    state.categories.push(cat); save(); return cat;
-  }
-  function updateCategory(id, patch) {
-    var c = getCategory(id);
-    if (c) { Object.assign(c, patch); save(); }
-  }
-  function reorderCategories(ids) {
-    ids.forEach(function (id, idx) {
-      var c = getCategory(id);
-      if (c) c.order = idx;
-    });
-    save();
-  }
-  function deleteCategory(id) {
-    state.categories = state.categories.filter(function (c) { return c.id !== id; });
-    save();
-  }
-  /* v1.3：该分类关联了多少条记录（删除前提示用） */
-  function countCategoryTx(id) {
-    var n = 0;
-    state.transactions.forEach(function (t) { if (t.categoryId === id) n++; });
-    return n;
-  }
-
-  /* ---- 交易 ---- */
-  function getTransactions() {
-    return state.transactions.slice().sort(function (a, b) {
-      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-      return b.ts - a.ts;
-    });
-  }
-  function addTransaction(t) {
-    t.id = uid('t');
-    t.ts = Date.now();
-    state.transactions.push(t);
-    save();
-    return t;
-  }
-  function deleteTransaction(id) {
-    state.transactions = state.transactions.filter(function (t) { return t.id !== id; });
-    save();
-  }
-  /* v1.1 新增：修改记录（分类 / 备注 / 类型），金额与账户不可改 */
-  function updateTransaction(id, patch) {
-    for (var i = 0; i < state.transactions.length; i++) {
-      if (state.transactions[i].id === id) {
-        Object.assign(state.transactions[i], patch);
-        save();
-        return state.transactions[i];
-      }
-    }
-    return null;
-  }
-  /* 区间收支汇总，date 为 'YYYY-MM-DD'，含端点 */
-  function summary(from, to) {
-    var income = 0, expense = 0;
-    state.transactions.forEach(function (t) {
-      if (t.date < from || t.date > to || t.kind === 'transfer') return;
-      if (t.kind === 'income') income += t.amount; else expense += t.amount;
-    });
-    return { income: r2(income), expense: r2(expense) };
-  }
-  function byCategory(from, to, kind) {
-    var map = {};
-    state.transactions.forEach(function (t) {
-      if (t.date < from || t.date > to) return;
-      if (t.kind !== kind) return;
-      map[t.categoryId] = (map[t.categoryId] || 0) + t.amount;
-    });
-    return Object.keys(map).map(function (cid) {
-      var c = getCategory(cid);
-      return {
-        id: cid,
-        name: c ? c.name : '其他',
-        icon: c ? c.icon : ICON_TAG,
-        color: c ? c.color : '#CCCCCC',
-        value: r2(map[cid])
-      };
-    }).sort(function (a, b) { return b.value - a.value; });
-  }
-  function r2(n) { return Math.round(n * 100) / 100; }
-
-  /* ---- 设置 / 数据 ---- */
-  function settings() { return state.settings; }
-  function setSetting(k, v) { state.settings[k] = v; save(); }
-  function exportJSON() { return JSON.stringify(state, null, 2); }
-  function importJSON(text) {
-    var data = JSON.parse(text);
-    if (!data.accounts || !data.transactions) throw new Error('格式不对');
-    state = data;
-    if (!state.settings) state.settings = { dark: false };
-    if (!state.settings.nickname) state.settings.nickname = 'Dora';
-    if (!state.categories) state.categories = [];
-    normalizeIcons();
-    save();
-  }
-  function clearAll() { state = blank(); migrate(); }
-
+  function settings(){return state.settings;}
+  function setSetting(k,v){return mutate(function(){if(k==='dark')state.settings.dark=!!v;else if(k==='nickname')state.settings.nickname=safeText(v,20,'Dora');else throw new Error('未知设置项');});}
+  function exportJSON(){return JSON.stringify(state,null,2);}
+  function previewImport(text){var parsed;try{parsed=JSON.parse(text);}catch(e){throw new Error('JSON 解析失败：'+e.message);}var legacy=!parsed.schemaVersion||parsed.schemaVersion<SCHEMA_VERSION;var data=validateData(parsed,legacy),dates=data.transactions.map(function(t){return t.date;}).sort();return{data:data,summary:{accounts:data.accounts.length,categories:data.categories.length,transactions:data.transactions.length,from:dates[0]||'无',to:dates[dates.length-1]||'无'}};}
+  function commitImport(preview){var next=preview&&preview.data?validateData(preview.data,true):null;if(!next)throw new Error('导入预览无效');var before=clone(state);try{localStorage.setItem(KEY+'-backup-'+Date.now(),JSON.stringify(state));state=next;save();loadError=null;return true;}catch(e){state=before;throw new Error('导入失败：'+e.message);}}
+  function importJSON(text){return commitImport(previewImport(text));}
+  function clearAll(){if(loadError)throw new Error('存档损坏时请使用“确认放弃并重置”');var before=clone(state);try{state=blank();save();}catch(e){state=before;throw e;}}
+  function getLoadError(){return loadError;}function exportRecovery(){return loadError?loadError.raw:'';}function discardCorruptAndReset(){state=blank();save();loadError=null;}
   load();
-
-  return {
-    getAccounts: getAccounts, getAccount: getAccount, accountBalance: accountBalance,
-    totalAssets: totalAssets, updateAccount: updateAccount, addAccount: addAccount,
-    setAccountBalance: setAccountBalance, reorderAccounts: reorderAccounts,
-    deleteAccount: deleteAccount, countAccountTx: countAccountTx,
-    getCategories: getCategories, getCategory: getCategory, addCategory: addCategory,
-    updateCategory: updateCategory, reorderCategories: reorderCategories, deleteCategory: deleteCategory,
-    countCategoryTx: countCategoryTx,
-    getTransactions: getTransactions, addTransaction: addTransaction, deleteTransaction: deleteTransaction,
-    updateTransaction: updateTransaction,
-    summary: summary, byCategory: byCategory,
-    settings: settings, setSetting: setSetting,
-    exportJSON: exportJSON, importJSON: importJSON, clearAll: clearAll,
-    faIcon: faIcon, VERSION: VERSION
-  };
+  return {getAccounts:getAccounts,getActiveAccounts:getActiveAccounts,getAccount:getAccount,accountBalance:accountBalance,totalAssets:totalAssets,updateAccount:updateAccount,addAccount:addAccount,setAccountBalance:setAccountBalance,saveAccount:saveAccount,reorderAccounts:reorderAccounts,countAccountTx:countAccountTx,archiveAccount:archiveAccount,restoreAccount:restoreAccount,deleteAccount:deleteAccount,getCategories:getCategories,getCategory:getCategory,addCategory:addCategory,updateCategory:updateCategory,reorderCategories:reorderCategories,countCategoryTx:countCategoryTx,deleteCategory:deleteCategory,getTransactions:getTransactions,addTransaction:addTransaction,deleteTransaction:deleteTransaction,updateTransaction:updateTransaction,summary:summary,byCategory:byCategory,monthlySummaries:monthlySummaries,settings:settings,setSetting:setSetting,exportJSON:exportJSON,previewImport:previewImport,commitImport:commitImport,importJSON:importJSON,clearAll:clearAll,getLoadError:getLoadError,exportRecovery:exportRecovery,discardCorruptAndReset:discardCorruptAndReset,faIcon:faIcon,VERSION:VERSION,SCHEMA_VERSION:SCHEMA_VERSION,_validateData:validateData};
 })();

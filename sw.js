@@ -1,13 +1,5 @@
-/* 缓存名带版本号：改版本号时这里一起变，老用户的旧缓存才会被清掉。
-   （sw.js 内容不变时浏览器不会重新安装 SW，老用户就会一直拿到旧的 CSS/JS）
-   v1.3 细节调整：应用版本号仍是 v1.3，这里用 -r3 后缀强制刷新一次缓存。*/
-var CACHE = 'jizhangben-v1.3-r3';
-/* Font Awesome CDN 资源：单独预缓存，失败不影响 App 本体离线可用 */
-var FA_ASSETS = [
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/fa-solid-900.woff2',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/fa-brands-400.woff2'
-];
+/* 缓存名与应用版本同步，新 SW 激活后会清理所有旧版缓存。 */
+var CACHE = 'jizhangben-v1.5.1';
 var ASSETS = [
   './',
   './index.html',
@@ -15,6 +7,9 @@ var ASSETS = [
   './js/store.js',
   './js/charts.js',
   './js/app.js',
+  './vendor/fontawesome/css/all.min.css',
+  './vendor/fontawesome/webfonts/fa-solid-900.woff2',
+  './vendor/fontawesome/webfonts/fa-brands-400.woff2',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -26,14 +21,8 @@ var ASSETS = [
 self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE).then(function (c) {
-      return c.addAll(ASSETS).catch(function () {});
-    }).then(function () {
-      return Promise.all(FA_ASSETS.map(function (u) {
-        return fetch(u, { mode: 'cors' }).then(function (resp) {
-          if (!resp || !resp.ok) return null;
-          return caches.open(CACHE).then(function (c) { return c.put(u, resp); });
-        }).catch(function () { return null; });
-      }));
+      /* 核心资源必须全部成功；任意一项失败都不安装残缺的 SW。 */
+      return c.addAll(ASSETS);
     }).then(function () {
       return self.skipWaiting();
     })
@@ -55,8 +44,10 @@ self.addEventListener('fetch', function (e) {
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
       return hit || fetch(e.request).then(function (resp) {
-        var copy = resp.clone();
-        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+        if (resp && (resp.ok || resp.type === 'opaque')) {
+          var copy = resp.clone();
+          caches.open(CACHE).then(function (c) { return c.put(e.request, copy); }).catch(function () {});
+        }
         return resp;
       }).catch(function () {
         /* 离线兜底：只给页面导航返回首页；CSS/字体等子资源别错返回 HTML */
