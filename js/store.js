@@ -2,7 +2,7 @@
 var Store = (function () {
   'use strict';
   var KEY = 'macaron-ledger-v1';
-  var VERSION = '1.5.2';
+  var VERSION = '1.5.3';
   var SCHEMA_VERSION = 2;
   var RECOVERY_PREFIX = KEY + '-recovery-';
   var ICON_TAG = 'fa-solid fa-tag', ICON_CARD = 'fa-solid fa-credit-card';

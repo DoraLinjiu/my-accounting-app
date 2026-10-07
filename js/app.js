@@ -23,7 +23,7 @@
   var FA_TAG = 'fa-solid fa-tag';
   var FA_CARD = 'fa-solid fa-credit-card';
   function ic(cls) {
-    if (cls === 'custom-red-packet') return '<span class="red-packet-icon" aria-hidden="true"><span>¥</span></span>';
+    if (cls === 'custom-red-packet') return '<img class="red-packet-svg" src="icons/icon.svg" alt="" aria-hidden="true">';
     return '<i class="' + cls + '" aria-hidden="true"></i>';
   }
   function faOf(obj, fallback) {

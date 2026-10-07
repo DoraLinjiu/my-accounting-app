@@ -632,6 +632,19 @@ html[data-theme="dark"] #bottomnav { background:rgba(35,33,39,.88); }
 .legend-item .red-packet-icon,.cat-manage-row .red-packet-icon { width:18px; height:16px; font-size:8px; border-radius:3px; }
 .legend-item .red-packet-icon span,.cat-manage-row .red-packet-icon span { width:10px; height:10px; }
 
+/* 直接使用用户制作的红包 SVG；用混合模式让 SVG 白底融入马卡龙气泡。 */
+.red-packet-svg {
+  display:block; width:24px; height:24px; max-width:none;
+  object-fit:contain; transform:scale(1.75); transform-origin:center;
+  mix-blend-mode:multiply; pointer-events:none;
+}
+.tx-icon,.cat-bubble { overflow:hidden; }
+.tx-icon .red-packet-svg { width:42px; height:42px; }
+.cat-bubble .red-packet-svg { width:52px; height:52px; }
+.legend-item .red-packet-svg { width:18px; height:18px; }
+.cat-manage-row .red-packet-svg { width:24px; height:24px; }
+html[data-theme="dark"] .red-packet-svg { mix-blend-mode:screen; opacity:.86; }
+
 /* 全部账单 */
 .bills-heading { display:flex; align-items:center; gap:12px; margin:2px 2px 16px; }
 .bills-heading h1 { margin:0; font-size:23px; line-height:1.25; letter-spacing:-.02em; }
