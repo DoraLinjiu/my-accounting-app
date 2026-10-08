@@ -37,10 +37,11 @@
 
   /* 新增账户 / 分类时可选用的图标 */
   var ICON_CHOICES = [
+    'custom-red-packet',
     'fa-solid fa-utensils', 'fa-solid fa-cart-shopping', 'fa-solid fa-car', 'fa-solid fa-gamepad',
     'fa-solid fa-house', 'fa-solid fa-droplet', 'fa-solid fa-mug-hot', 'fa-solid fa-bus',
     'fa-solid fa-shirt', 'fa-solid fa-film', 'fa-solid fa-book', 'fa-solid fa-dumbbell',
-    'fa-solid fa-plane', 'fa-solid fa-phone', 'fa-solid fa-wifi', 'fa-solid fa-gift', 'custom-red-packet',
+    'fa-solid fa-plane', 'fa-solid fa-phone', 'fa-solid fa-wifi', 'fa-solid fa-gift',
     'fa-solid fa-heart', 'fa-solid fa-star', 'fa-solid fa-bolt', 'fa-solid fa-tag',
     'fa-solid fa-credit-card', 'fa-solid fa-wallet', 'fa-solid fa-piggy-bank', 'fa-solid fa-building-columns',
     'fa-solid fa-money-bill-wave', 'fa-solid fa-chart-line', 'fa-solid fa-envelope', 'fa-solid fa-briefcase',
@@ -48,7 +49,8 @@
   ];
   function iconPickHtml(selected) {
     return ICON_CHOICES.map(function (cls) {
-      return '<button type="button" class="icon-pick-btn' + (cls === selected ? ' on' : '') + '" data-icon="' + cls + '">' +
+      var redPacketAttrs = cls === 'custom-red-packet' ? ' title="红包 ¥" aria-label="红包 ¥"' : '';
+      return '<button type="button" class="icon-pick-btn' + (cls === selected ? ' on' : '') + '" data-icon="' + cls + '"' + redPacketAttrs + '>' +
         ic(cls) + '</button>';
     }).join('');
   }
@@ -785,7 +787,7 @@
 
   function openAddAccount() {
     var colors = ['#FFB3BA', '#BAE1FF', '#BAFFC9', '#FFFFBA'];
-    var pickedIcon = ICON_CHOICES[0];
+    var pickedIcon = 'fa-solid fa-wallet';
     openSheet(
       '<div class="card-title">添加账户</div>' +
       '<div class="field-label">名称</div><input class="input" id="newAccName" placeholder="如：招商信用卡">' +
@@ -988,7 +990,7 @@
   function renderCatManage() {
     var exp = Store.getCategories('expense');
     var inc = Store.getCategories('income');
-    var newCatIcon = ICON_CHOICES[0];
+    var newCatIcon = 'fa-solid fa-utensils';
     function rows(list) {
       return list.map(function (c) {
         /* v1.3：去掉行内的 × 删除按钮（和拖拽手柄挨太近容易误触），

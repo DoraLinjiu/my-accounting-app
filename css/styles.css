@@ -420,8 +420,23 @@ html[data-theme="dark"] .acc-icon i { filter: none; }
 .icon-pick-btn i { font-size: 15px; color: rgba(0, 0, 0, .5); }
 .icon-pick-btn.on { border-color: var(--pink-deep); background: rgba(255, 179, 186, .2); }
 .icon-pick-btn.on i { color: var(--accent-ink); }
+.icon-pick-btn .red-packet-svg { width:15px; height:15px; color:rgba(0,0,0,.5); }
+.icon-pick-btn.on .red-packet-svg { color:var(--accent-ink); }
+.icon-pick-btn[data-icon="custom-red-packet"] {
+  position:relative; background:rgba(255,179,186,.22);
+  border-color:rgba(192,69,90,.35); color:var(--accent-ink);
+}
+.icon-pick-btn[data-icon="custom-red-packet"] .red-packet-svg { width:21px; height:21px; color:var(--accent-ink); }
+.icon-pick-btn[data-icon="custom-red-packet"]::after {
+  content:"¥"; position:absolute; right:5px; bottom:3px;
+  color:var(--accent-ink); font-size:8px; font-weight:800;
+}
+.icon-pick-btn[data-icon="custom-red-packet"].on { background:rgba(255,179,186,.38); box-shadow:0 0 0 2px rgba(192,69,90,.12); }
 html[data-theme="dark"] .icon-pick-btn i { color: rgba(255, 255, 255, .6); }
 html[data-theme="dark"] .icon-pick-btn.on i { color: var(--accent-ink); }
+html[data-theme="dark"] .icon-pick-btn .red-packet-svg { color:rgba(255,255,255,.6); }
+html[data-theme="dark"] .icon-pick-btn.on .red-packet-svg { color:var(--accent-ink); }
+html[data-theme="dark"] .icon-pick-btn[data-icon="custom-red-packet"] { background:rgba(192,69,90,.18); }
 
 /* ===== v1.3：期间导航条 / 自定义范围 / 月份选择器 ===== */
 /* 一条 ‹ 标题 › 的期间导航：左右各翻一个周期，点中间标题跳月。
@@ -543,13 +558,6 @@ body { font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, 
 .import-summary b { display:block; font-size:20px; }
 .import-summary span { display:block; margin-top:3px; color:var(--text-sub); font-size:11px; }
 
-/* 自定义红包：不依赖 emoji，中央始终是清晰的 ¥ */
-.red-packet-icon { position:relative; display:inline-flex; width:23px; height:27px; align-items:center; justify-content:center; border-radius:5px 5px 7px 7px; background:linear-gradient(155deg,#EF6670,#C93D4B); color:#FFE5A0; box-shadow:inset 0 0 0 1px rgba(122,22,34,.18),0 2px 5px rgba(145,36,48,.18); font:800 14px/1 Arial,sans-serif; vertical-align:middle; }
-.red-packet-icon::before { content:""; position:absolute; left:2px; right:2px; top:2px; height:9px; border-radius:4px 4px 50% 50%; border-bottom:1.5px solid rgba(255,225,154,.65); }
-.red-packet-icon span { position:relative; z-index:1; margin-top:4px; }
-.legend-item .red-packet-icon { width:17px; height:20px; font-size:10px; border-radius:4px; }
-.cat-manage-row .red-packet-icon { width:20px; height:23px; font-size:12px; }
-
 /* 趋势图：金额刻度、参考线和柱顶数字 */
 .bar-scroll { padding:4px 0 6px; scrollbar-width:thin; }
 .chart-grid { stroke:var(--line); stroke-width:1; }
@@ -625,25 +633,16 @@ html[data-theme="dark"] #bottomnav { background:rgba(35,33,39,.88); }
 .all-bills-link { border:0; background:rgba(190,69,91,.08); color:var(--accent-ink); border-radius:999px; padding:7px 10px; font:600 12px/1 inherit; cursor:pointer; }
 .all-bills-link i { color:inherit; font-size:10px; margin-left:3px; }
 
-/* 红包与 Font Awesome 一样使用单色线性语言，不再出现突兀的红色实心贴图 */
-.red-packet-icon { position:relative; display:inline-flex; width:22px; height:19px; align-items:center; justify-content:center; border:1.7px solid currentColor; border-radius:4px; background:transparent; color:inherit; box-shadow:none; font:800 10px/1 Arial,sans-serif; vertical-align:middle; }
-.red-packet-icon::before { content:""; position:absolute; left:2px; right:2px; top:1px; height:7px; border-radius:0 0 50% 50%; border-bottom:1.4px solid currentColor; opacity:.75; }
-.red-packet-icon span { position:relative; z-index:1; display:flex; align-items:center; justify-content:center; width:12px; height:12px; margin-top:5px; border:1.4px solid currentColor; border-radius:50%; background:inherit; }
-.legend-item .red-packet-icon,.cat-manage-row .red-packet-icon { width:18px; height:16px; font-size:8px; border-radius:3px; }
-.legend-item .red-packet-icon span,.cat-manage-row .red-packet-icon span { width:10px; height:10px; }
-
-/* 直接使用用户制作的红包 SVG；用混合模式让 SVG 白底融入马卡龙气泡。 */
+/* 轻量线性红包 SVG：尺寸和笔画与 Font Awesome 分类图标一致。 */
 .red-packet-svg {
-  display:block; width:24px; height:24px; max-width:none;
-  object-fit:contain; transform:scale(1.75); transform-origin:center;
-  mix-blend-mode:multiply; pointer-events:none;
+  display:block; width:1em; height:1em; pointer-events:none;
+  fill:none; stroke:currentColor; stroke-width:1.65;
+  stroke-linecap:round; stroke-linejoin:round;
 }
-.tx-icon,.cat-bubble { overflow:hidden; }
-.tx-icon .red-packet-svg { width:42px; height:42px; }
-.cat-bubble .red-packet-svg { width:52px; height:52px; }
-.legend-item .red-packet-svg { width:18px; height:18px; }
-.cat-manage-row .red-packet-svg { width:24px; height:24px; }
-html[data-theme="dark"] .red-packet-svg { mix-blend-mode:screen; opacity:.86; }
+.tx-icon .red-packet-svg { width:18px; height:18px; }
+.cat-bubble .red-packet-svg { width:21px; height:21px; }
+.legend-item .red-packet-svg { width:12px; height:12px; color:var(--text-sub); }
+.cat-manage-row .red-packet-svg { width:16px; height:16px; }
 
 /* 全部账单 */
 .bills-heading { display:flex; align-items:center; gap:12px; margin:2px 2px 16px; }
