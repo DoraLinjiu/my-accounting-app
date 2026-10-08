@@ -420,8 +420,12 @@ html[data-theme="dark"] .acc-icon i { filter: none; }
 .icon-pick-btn i { font-size: 15px; color: rgba(0, 0, 0, .5); }
 .icon-pick-btn.on { border-color: var(--pink-deep); background: rgba(255, 179, 186, .2); }
 .icon-pick-btn.on i { color: var(--accent-ink); }
+.icon-pick-btn .red-packet-svg { width:15px; height:15px; color:rgba(0,0,0,.5); }
+.icon-pick-btn.on .red-packet-svg { color:var(--accent-ink); }
 html[data-theme="dark"] .icon-pick-btn i { color: rgba(255, 255, 255, .6); }
 html[data-theme="dark"] .icon-pick-btn.on i { color: var(--accent-ink); }
+html[data-theme="dark"] .icon-pick-btn .red-packet-svg { color:rgba(255,255,255,.6); }
+html[data-theme="dark"] .icon-pick-btn.on .red-packet-svg { color:var(--accent-ink); }
 
 /* ===== v1.3：期间导航条 / 自定义范围 / 月份选择器 ===== */
 /* 一条 ‹ 标题 › 的期间导航：左右各翻一个周期，点中间标题跳月。

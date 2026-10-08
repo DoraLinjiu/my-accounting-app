@@ -1,5 +1,5 @@
 /* 缓存名与应用版本同步，新 SW 激活后会清理所有旧版缓存。 */
-var CACHE = 'jizhangben-v1.5.3-r1';
+var CACHE = 'jizhangben-v1.5.3-r2';
 var ASSETS = [
   './',
   './index.html',

@@ -40,7 +40,7 @@
     'fa-solid fa-utensils', 'fa-solid fa-cart-shopping', 'fa-solid fa-car', 'fa-solid fa-gamepad',
     'fa-solid fa-house', 'fa-solid fa-droplet', 'fa-solid fa-mug-hot', 'fa-solid fa-bus',
     'fa-solid fa-shirt', 'fa-solid fa-film', 'fa-solid fa-book', 'fa-solid fa-dumbbell',
-    'fa-solid fa-plane', 'fa-solid fa-phone', 'fa-solid fa-wifi', 'fa-solid fa-gift',
+    'fa-solid fa-plane', 'fa-solid fa-phone', 'fa-solid fa-wifi', 'fa-solid fa-gift', 'custom-red-packet',
     'fa-solid fa-heart', 'fa-solid fa-star', 'fa-solid fa-bolt', 'fa-solid fa-tag',
     'fa-solid fa-credit-card', 'fa-solid fa-wallet', 'fa-solid fa-piggy-bank', 'fa-solid fa-building-columns',
     'fa-solid fa-money-bill-wave', 'fa-solid fa-chart-line', 'fa-solid fa-envelope', 'fa-solid fa-briefcase',
