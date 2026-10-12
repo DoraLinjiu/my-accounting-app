@@ -52,7 +52,9 @@
 <script src="js/app.js?v=1.5.3"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-  navigator.serviceWorker.register('sw.js').catch(function(){});
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function(reg) {
+    reg.update().catch(function(){});
+  }).catch(function(){});
 }
 </script>
 </body>

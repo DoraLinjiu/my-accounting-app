@@ -23,11 +23,7 @@
   var FA_TAG = 'fa-solid fa-tag';
   var FA_CARD = 'fa-solid fa-credit-card';
   function ic(cls) {
-    if (cls === 'custom-red-packet') return '<svg class="red-packet-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-      '<path d="M5.5 3.5h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/>' +
-      '<path d="M4 7.5c2.1 2.2 4.8 3.3 8 3.3s5.9-1.1 8-3.3"/>' +
-      '<path d="m9.2 13 2.8 3.8 2.8-3.8M12 16.8v3M9.7 17.3h4.6"/>' +
-      '</svg>';
+    if (cls === 'custom-red-packet') return '<span class="red-packet-fa" aria-hidden="true"><i class="fa-solid fa-envelope"></i><span>¥</span></span>';
     return '<i class="' + cls + '" aria-hidden="true"></i>';
   }
   function faOf(obj, fallback) {

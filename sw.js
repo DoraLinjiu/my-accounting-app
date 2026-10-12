@@ -1,5 +1,5 @@
 /* 缓存名与应用版本同步，新 SW 激活后会清理所有旧版缓存。 */
-var CACHE = 'jizhangben-v1.5.3-r3';
+var CACHE = 'jizhangben-v1.5.3-r4';
 var ASSETS = [
   './',
   './index.html',
@@ -41,6 +41,15 @@ self.addEventListener('activate', function (e) {
 
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then(function (resp) {
+        if (resp && resp.ok) caches.open(CACHE).then(function (c) { return c.put('./index.html', resp.clone()); });
+        return resp;
+      }).catch(function () { return caches.match('./index.html'); })
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
       return hit || fetch(e.request).then(function (resp) {
@@ -49,11 +58,7 @@ self.addEventListener('fetch', function (e) {
           caches.open(CACHE).then(function (c) { return c.put(e.request, copy); }).catch(function () {});
         }
         return resp;
-      }).catch(function () {
-        /* 离线兜底：只给页面导航返回首页；CSS/字体等子资源别错返回 HTML */
-        if (e.request.mode === 'navigate') return caches.match('./index.html');
-        return Response.error();
-      });
+      }).catch(function () { return Response.error(); });
     })
   );
 });
