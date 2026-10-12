@@ -420,12 +420,12 @@ html[data-theme="dark"] .acc-icon i { filter: none; }
 .icon-pick-btn i { font-size: 15px; color: rgba(0, 0, 0, .5); }
 .icon-pick-btn.on { border-color: var(--pink-deep); background: rgba(255, 179, 186, .2); }
 .icon-pick-btn.on i { color: var(--accent-ink); }
-.icon-pick-btn .red-packet-fa { color:var(--accent-ink); }
+.icon-pick-btn .red-packet-mark { width:18px; height:18px; color:var(--accent-ink); }
 .icon-pick-btn[data-icon="custom-red-packet"] {
   position:relative; background:rgba(255,179,186,.22);
   border-color:rgba(192,69,90,.35); color:var(--accent-ink);
 }
-.icon-pick-btn[data-icon="custom-red-packet"] .red-packet-fa { width:23px; height:20px; }
+.icon-pick-btn[data-icon="custom-red-packet"] .red-packet-mark { width:22px; height:22px; }
 .icon-pick-btn[data-icon="custom-red-packet"].on { background:rgba(255,179,186,.38); box-shadow:0 0 0 2px rgba(192,69,90,.12); }
 html[data-theme="dark"] .icon-pick-btn i { color: rgba(255, 255, 255, .6); }
 html[data-theme="dark"] .icon-pick-btn.on i { color: var(--accent-ink); }
@@ -626,18 +626,12 @@ html[data-theme="dark"] #bottomnav { background:rgba(35,33,39,.88); }
 .all-bills-link { border:0; background:rgba(190,69,91,.08); color:var(--accent-ink); border-radius:999px; padding:7px 10px; font:600 12px/1 inherit; cursor:pointer; }
 .all-bills-link i { color:inherit; font-size:10px; margin-left:3px; }
 
-/* 红包使用本地 Font Awesome 信封并叠加 ¥，不依赖外部 SVG。 */
-.red-packet-fa { position:relative; display:inline-flex; width:20px; height:18px; align-items:center; justify-content:center; color:inherit; pointer-events:none; vertical-align:middle; }
-.red-packet-fa > i { color:inherit !important; font-size:18px !important; filter:none !important; }
-.red-packet-fa > span { position:absolute; left:50%; bottom:-1px; transform:translateX(-50%); display:flex; width:12px; height:12px; align-items:center; justify-content:center; border:1.5px solid currentColor; border-radius:50%; background:var(--card); color:#B8435A; font:800 8px/1 Arial,sans-serif; }
-.tx-icon .red-packet-fa { width:19px; height:18px; }
-.cat-bubble .red-packet-fa { width:22px; height:20px; }
-.legend-item .red-packet-fa { width:14px; height:13px; color:var(--text-sub); }
-.legend-item .red-packet-fa > i { font-size:13px !important; }
-.legend-item .red-packet-fa > span { width:8px; height:8px; border-width:1px; font-size:5px; }
-.cat-manage-row .red-packet-fa { width:18px; height:16px; }
-.cat-manage-row .red-packet-fa > i { font-size:16px !important; }
-.cat-manage-row .red-packet-fa > span { width:10px; height:10px; font-size:6px; }
+/* 简笔红包：圆角红包、弧形封口和 ¥ 印章，线重与 Font Awesome 接近。 */
+.red-packet-mark { display:block; width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.tx-icon .red-packet-mark { width:19px; height:19px; }
+.cat-bubble .red-packet-mark { width:22px; height:22px; }
+.legend-item .red-packet-mark { width:13px; height:13px; color:var(--text-sub); stroke-width:1.9; }
+.cat-manage-row .red-packet-mark { width:17px; height:17px; }
 
 /* 全部账单 */
 .bills-heading { display:flex; align-items:center; gap:12px; margin:2px 2px 16px; }

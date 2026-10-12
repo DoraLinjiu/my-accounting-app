@@ -1,5 +1,5 @@
 /* 缓存名与应用版本同步，新 SW 激活后会清理所有旧版缓存。 */
-var CACHE = 'jizhangben-v1.5.3-r4';
+var CACHE = 'jizhangben-v1.5.3-r5';
 var ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ var ASSETS = [
   './vendor/fontawesome/webfonts/fa-brands-400.woff2',
   './manifest.webmanifest',
   './icons/icon.svg',
+  './icons/red-packet.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-512-maskable.png',
