@@ -23,12 +23,7 @@
   var FA_TAG = 'fa-solid fa-tag';
   var FA_CARD = 'fa-solid fa-credit-card';
   function ic(cls) {
-    if (cls === 'custom-red-packet') return '<svg class="red-packet-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-      '<path d="M6 3.5h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/>' +
-      '<path d="M4.4 7.2c2 2.1 4.6 3.2 7.6 3.2s5.6-1.1 7.6-3.2"/>' +
-      '<circle cx="12" cy="15.4" r="2.7"/>' +
-      '<path d="m10.7 14.2 1.3 1.5 1.3-1.5M12 15.7v2M10.9 16.7h2.2"/>' +
-      '</svg>';
+    if (cls === 'custom-red-packet') return '<i class="fa-solid fa-piggy-bank" aria-hidden="true"></i>';
     return '<i class="' + cls + '" aria-hidden="true"></i>';
   }
   function faOf(obj, fallback) {
@@ -38,7 +33,6 @@
 
   /* 新增账户 / 分类时可选用的图标 */
   var ICON_CHOICES = [
-    'custom-red-packet',
     'fa-solid fa-utensils', 'fa-solid fa-cart-shopping', 'fa-solid fa-car', 'fa-solid fa-gamepad',
     'fa-solid fa-house', 'fa-solid fa-droplet', 'fa-solid fa-mug-hot', 'fa-solid fa-bus',
     'fa-solid fa-shirt', 'fa-solid fa-film', 'fa-solid fa-book', 'fa-solid fa-dumbbell',
@@ -50,8 +44,7 @@
   ];
   function iconPickHtml(selected) {
     return ICON_CHOICES.map(function (cls) {
-      var redPacketAttrs = cls === 'custom-red-packet' ? ' title="红包 ¥" aria-label="红包 ¥"' : '';
-      return '<button type="button" class="icon-pick-btn' + (cls === selected ? ' on' : '') + '" data-icon="' + cls + '"' + redPacketAttrs + '>' +
+      return '<button type="button" class="icon-pick-btn' + (cls === selected ? ' on' : '') + '" data-icon="' + cls + '">' +
         ic(cls) + '</button>';
     }).join('');
   }

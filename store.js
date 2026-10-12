@@ -3,7 +3,7 @@ var Store = (function () {
   'use strict';
   var KEY = 'macaron-ledger-v1';
   var VERSION = '1.5.3';
-  var SCHEMA_VERSION = 4;
+  var SCHEMA_VERSION = 5;
   var RECOVERY_PREFIX = KEY + '-recovery-';
   var ICON_TAG = 'fa-solid fa-tag', ICON_CARD = 'fa-solid fa-credit-card';
   var ALLOWED_ICONS = [
@@ -38,7 +38,7 @@ var Store = (function () {
     {id:'c-rent',name:'房租',icon:'fa-solid fa-house',color:'#FFB3BA',kind:'expense',order:5},
     {id:'c-other',name:'其他',icon:'fa-solid fa-ellipsis',color:'#BAE1FF',kind:'expense',order:6},
     {id:'c-salary',name:'工资',icon:'fa-solid fa-money-bill-wave',color:'#BAFFC9',kind:'income',order:7},
-    {id:'c-hb',name:'红包',icon:'custom-red-packet',color:'#E75B62',kind:'income',order:8},
+    {id:'c-hb',name:'红包',icon:'fa-solid fa-piggy-bank',color:'#E75B62',kind:'income',order:8},
     {id:'c-inv',name:'理财',icon:'fa-solid fa-chart-line',color:'#BAE1FF',kind:'income',order:9},
     {id:'c-inoth',name:'其他',icon:'fa-solid fa-ellipsis',color:'#FFFFBA',kind:'income',order:10}
   ];
@@ -66,7 +66,7 @@ var Store = (function () {
     d.settings.dark=!!d.settings.dark;d.settings.nickname=safeText(d.settings.nickname,20,'Dora');
     d.accounts.forEach(function(a,i){a.archived=!!a.archived;a.icon=faIcon(a.icon,ICON_CARD);a.color=validColor(a.color)?a.color:'#BAE1FF';a.order=finiteNumber(a.order)?a.order:i;});
     ['c-water','c-other','c-inoth'].forEach(function(id){if(!d.categories.some(function(c){return c.id===id;}))d.categories.push(clone(DEFAULT_CATEGORIES.filter(function(c){return c.id===id;})[0]));});
-    d.categories.forEach(function(c,i){var oldRedPacket=c.id==='c-hb'&&(sourceVersion<4||c.icon==='fa-solid fa-envelope'||c.icon==='fa-solid fa-envelope-open-text'||c.icon==='fa-solid fa-piggy-bank');c.icon=oldRedPacket?'custom-red-packet':faIcon(c.icon,ICON_TAG);c.color=validColor(c.color)?c.color:'#BAE1FF';c.order=finiteNumber(c.order)?c.order:i;});
+    d.categories.forEach(function(c,i){var oldRedPacket=c.id==='c-hb'&&(sourceVersion<5||c.icon==='custom-red-packet'||c.icon==='fa-solid fa-envelope'||c.icon==='fa-solid fa-envelope-open-text');c.icon=oldRedPacket?'fa-solid fa-piggy-bank':faIcon(c.icon,ICON_TAG);c.color=validColor(c.color)?c.color:'#BAE1FF';c.order=finiteNumber(c.order)?c.order:i;});
     var accountIds={};d.accounts.forEach(function(a){accountIds[a.id]=true;});
     d.transactions.forEach(function(t){[t.accountId,t.toAccountId].forEach(function(id){if(id&&!accountIds[id]){d.accounts.push({id:id,name:'旧版已删除账户',icon:ICON_CARD,color:'#B8B8C2',balance:0,order:d.accounts.length,archived:true,legacyPlaceholder:true});accountIds[id]=true;}});});
     var categoryIds={};d.categories.forEach(function(c){categoryIds[c.id]=true;});
