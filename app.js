@@ -39,7 +39,7 @@
     'fa-solid fa-plane', 'fa-solid fa-phone', 'fa-solid fa-wifi', 'fa-solid fa-gift',
     'fa-solid fa-heart', 'fa-solid fa-star', 'fa-solid fa-bolt', 'fa-solid fa-tag',
     'fa-solid fa-credit-card', 'fa-solid fa-wallet', 'fa-solid fa-piggy-bank', 'fa-solid fa-building-columns',
-    'fa-solid fa-money-bill-wave', 'fa-solid fa-chart-line', 'fa-solid fa-envelope', 'fa-solid fa-briefcase',
+    'fa-solid fa-money-bill-wave', 'fa-solid fa-chart-line', 'fa-solid fa-envelope', 'fa-solid fa-briefcase', 'fa-solid fa-scissors',
     'fa-brands fa-weixin', 'fa-brands fa-alipay', 'fa-solid fa-coins', 'fa-solid fa-paw'
   ];
   function iconPickHtml(selected) {
@@ -84,6 +84,24 @@
   /* ---------- 主题 ---------- */
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', Store.settings().dark ? 'dark' : 'light');
+  }
+
+  /* ---------- 金额隐私 ---------- */
+  function amountsHidden() { return !!Store.settings().hideAmounts; }
+  function privateMoney(value, prefix) { return amountsHidden() ? '***' : (prefix == null ? '¥ ' : prefix) + fmt(value); }
+  function privacyButton(id) {
+    var hidden = amountsHidden();
+    return '<button class="privacy-toggle" id="' + id + '" type="button" aria-label="' + (hidden ? '显示金额' : '隐藏金额') + '" title="' + (hidden ? '显示金额' : '隐藏金额') + '">' +
+      ic(hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye') + '</button>';
+  }
+  function bindPrivacyButton(id) {
+    var button = $('#' + id);
+    if (!button) return;
+    button.addEventListener('click', function () {
+      try { Store.setSetting('hideAmounts', !amountsHidden()); }
+      catch (e) { actionError(e, '隐私设置保存失败'); return; }
+      rerender();
+    });
   }
 
   /* ---------- 弹层 ---------- */
@@ -178,7 +196,7 @@
     $('#page-home').innerHTML =
       '<div class="hero">' +
         '<div class="label">总资产 (元)</div>' +
-        '<div class="total">¥ ' + fmt(total) + '</div>' +
+        '<div class="hero-total-row"><div class="total">' + privateMoney(total, '¥ ') + '</div>' + privacyButton('homePrivacy') + '</div>' +
         '<div class="hero-row">' +
           '<div class="hero-pill">今日支出<b>¥' + fmt(sumToday.expense) + '</b></div>' +
           '<div class="hero-pill">今日收入<b>¥' + fmt(sumToday.income) + '</b></div>' +
@@ -205,6 +223,7 @@
       el.addEventListener('click', function () { openTxEdit(el.getAttribute('data-id')); });
     });
     $('#allBills').addEventListener('click', function () { go('bills'); });
+    bindPrivacyButton('homePrivacy');
     /* v1.3：汇总卡片的月份导航 */
     $('#homePrev').addEventListener('click', function () { homeState.ym = shiftMonth(homeState.ym, -1); renderHome(); });
     $('#homeNext').addEventListener('click', function () { homeState.ym = shiftMonth(homeState.ym, 1); renderHome(); });
@@ -735,7 +754,7 @@
       return '<div class="acc-card" data-id="' + a.id + '">' +
         '<div class="acc-icon" style="color:' + (a.color || '#BAE1FF') + '">' + iconOf(a, FA_CARD) + '</div>' +
         '<div class="acc-main"><div class="acc-name">' + esc(a.name) + '</div>' +
-        '<div class="acc-bal">¥ ' + fmt(Store.accountBalance(a.id)) + '</div></div>' +
+        '<div class="acc-bal">' + privateMoney(Store.accountBalance(a.id), '¥ ') + '</div></div>' +
         '<div class="drag-handle" title="拖拽排序">' + ic('fa-solid fa-grip-lines') + '</div>' +
       '</div>';
     }).join('');
@@ -743,12 +762,12 @@
       return '<div class="acc-card archived" data-archived-id="' + esc(a.id) + '">' +
         '<div class="acc-icon" style="color:' + (a.color || '#B8B8C2') + '">' + iconOf(a, FA_CARD) + '</div>' +
         '<div class="acc-main"><div class="acc-name">' + esc(a.name) + ' <span class="status-badge">已归档</span></div>' +
-        '<div class="acc-bal">¥ ' + fmt(Store.accountBalance(a.id)) + ' · 仍计入总资产</div></div>' +
+        '<div class="acc-bal">' + privateMoney(Store.accountBalance(a.id), '¥ ') + ' · 仍计入总资产</div></div>' +
         '<button class="mini-action" data-restore="' + esc(a.id) + '" aria-label="恢复账户 ' + esc(a.name) + '">恢复</button></div>';
     }).join('');
 
     $('#page-accounts').innerHTML =
-      '<div class="hero"><div class="label">总资产 (元)</div><div class="total">¥ ' + fmt(total) + '</div>' +
+      '<div class="hero"><div class="label">总资产 (元)</div><div class="hero-total-row"><div class="total">' + privateMoney(total, '¥ ') + '</div>' + privacyButton('accountsPrivacy') + '</div>' +
         '<div class="hero-row">' +
           '<div class="hero-pill" id="btnTransfer" style="cursor:pointer">' + ic('fa-solid fa-arrow-right-arrow-left') + ' 账户互转</div>' +
           '<div class="hero-pill" id="btnAddAcc" style="cursor:pointer">' + ic('fa-solid fa-plus') + ' 添加账户</div>' +
@@ -760,6 +779,7 @@
 
     $('#btnTransfer').addEventListener('click', function () { openRecordSheet('transfer'); });
     $('#btnAddAcc').addEventListener('click', openAddAccount);
+    bindPrivacyButton('accountsPrivacy');
     $$('#accList .acc-card').forEach(function (el) {
       el.addEventListener('click', function (e) {
         if (e.target.closest('.drag-handle')) return;
